@@ -1,14 +1,14 @@
 class Syphon::Api::Resource
 
-  ACTIONS = [ :index, :show, :create, :update, :delete ].freeze
+  ACTIONS = [ :index, :show, :create, :update, :destroy].freeze
 
   attr_accessor :model, :controller, :fields, :resources, :collections
   attr_reader   :name, :namespace, :super_controller, :allowed_actions, :disallowed_actions
 
-  def initialize(name, namespace, super_controller, opts = {})
+  def initialize(name, context, opts = {})
     @name = @model = @controller = name
-    @namespace = namespace[1..-1] # remove leading slash
-    @super_controller = super_controller # can be nil
+    @namespace = context.namespace[1..-1] # remove leading slash
+    @super_controller = context.super_controller # can be nil
     @fields, @resources, @collections = [], [], []
 
     @allowed_actions = ACTIONS && (opts[:only] || ACTIONS) - (opts[:except] || [])
@@ -20,7 +20,8 @@ class Syphon::Api::Resource
 
     model_proxy = Class.new(Syphon::Api::ModelProxy)
     model_proxy.model = model_class
-    controller = Class.new(super_controller_class || Object)
+    model_proxy.fields = fields
+    controller = Class.new(super_controller_class || ActionController::Base)
     controller.send(:include, Syphon::Api::CRUDController)
     controller.model_proxy = model_proxy
 
@@ -83,8 +84,8 @@ private
   end
 
   # Fixes stupid safe_constantize behavior where
-  # "Api::V2::SomeController".safe_constantize returns 
-  # ::SomeController if it exists
+  # "NS1::NS2::SomeClass".safe_constantize returns 
+  # ::SomeClass if it exists
   #
   def constantize(name)
     const = name.safe_constantize

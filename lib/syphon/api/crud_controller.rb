@@ -3,6 +3,12 @@ module Syphon::Api::CRUDController
 
   included do
     class_attribute :model_proxy  
+    rescue_from Exception do |exception|
+      render :json => { exception: exception.class.name,
+                        message: exception.message, 
+                        backtrace: exception.backtrace[0..10] }, 
+             :status => 500
+    end
   end
 
   def index
@@ -18,11 +24,11 @@ module Syphon::Api::CRUDController
   end
 
   def update
-    model_proxy.update(params[:id], params[:attributes])
+    respond_with model_proxy.update(params[:id], params[:attributes])
   end
 
   def destroy
-    model_proxy.destroy(params[:id])
+    respond_with model_proxy.destroy(params[:id])
   end
 
 end

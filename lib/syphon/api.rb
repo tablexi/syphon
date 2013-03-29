@@ -1,4 +1,13 @@
+require 'json'
+require 'active_support'
+require 'syphon/dsl_context'
+require 'syphon/core_ext/action_dispatch'
+
 class Syphon::Api
+  autoload :Resource,       'syphon/api/resource'
+  autoload :ModelProxy,     'syphon/api/model_proxy'
+  autoload :CRUDController, 'syphon/api/crud_controller'
+
   private_class_method :new # enforce singleton
 
   class << self
@@ -6,7 +15,7 @@ class Syphon::Api
     attr_accessor :resources
 
     def api(&definition)
-      @resources = DSLContext[definition]
+      @resources = Syphon::DSLContext[definition, resource_class: Syphon::Api::Resource]
     end
 
     def draw_routes!(application)

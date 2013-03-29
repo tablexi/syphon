@@ -1,6 +1,6 @@
-class Syphon::Api::DSLContext
+class Syphon::DSLContext
 
-  CONTEXT_VARS = :ctx_type, :ctx_namespace, :ctx_super_controller, :ctx_resource
+  CONTEXT_VARS = :type, :namespace, :super_controller, :resource
 
   class Context < Struct.new(:parent, *CONTEXT_VARS)
     # emulate lexical scoping
@@ -11,12 +11,14 @@ class Syphon::Api::DSLContext
     end
   end
 
-  CONTEXT_VARS.each do |var|
-    send(:define_method, var) { @context.send(var) }
-    send(:define_method, "#{var}=") { |val| @context.send("#{var}=", val) }
-  end
+  attr_reader :context
+  alias_method :ctx, :context
 
-  def initialize
+  def initialize(opts = {})
+    @allowed_commands = opts[:commands]
+    @resource_class = opts[:resource_class] || Syphon::Api::Resource 
+    expose_allowed_commands
+
     @resources = []
     @context = Context.new(nil, :root, '')
     @context_stack = []
@@ -24,15 +26,14 @@ class Syphon::Api::DSLContext
 
   def namespace(name, &block)
     new_context :namespace, block do
-      self.ctx_namespace += "/#{name}"
+      ctx.namespace += "/#{name}"
     end
   end
 
   def resource(name, opts = {}, &block)
     new_context :resource, block do
-      self.ctx_resource = \
-        Syphon::Api::Resource.new(name, ctx_namespace, ctx_super_controller, opts)
-      @resources << ctx_resource
+      ctx.resource = @resource_class.new(name, ctx, opts)
+      @resources << ctx.resource
     end
   end
 
@@ -40,27 +41,38 @@ class Syphon::Api::DSLContext
   # legally
   #
   def controller(klass)
-    case ctx_type
+    case ctx.type
     when :root, :namespace
-      self.ctx_super_controller = klass
+      ctx.super_controller = klass
     when :resource
-      ctx_resource.controller = klass
+      ctx.resource.controller = klass
     end
   end
 
   def model(klass)
     check_context_nesting(:inner)
-    ctx_resource.model = klass
+    ctx.resource.model = klass
   end
 
   [:fields, :resources, :collections].each do |method|
     send(:define_method, method) do |*val|
       check_context_nesting(:inner)
-      ctx_resource.send("#{method}=", val)
+      ctx.resource.send("#{method}=", val)
     end
   end
 
 private
+
+  def expose_allowed_commands
+    return unless @allowed_commands
+    private_commands = \
+      public_methods(false) - @allowed_commands
+    private_commands.each do |command|
+      singleton_class.class_eval do
+        private(command)
+      end
+    end
+  end
 
   def new_context(type, proc = nil)
     create_new_context(type)
@@ -89,11 +101,11 @@ private
     error = \
       case new_context_type
       when :namespace
-        ctx_type != :root && ctx_type != :namespace
+        ctx.type != :root && ctx.type != :namespace
       when :resource
-        ctx_type != :root && ctx_type != :namespace 
+        ctx.type != :root && ctx.type != :namespace 
       when :inner
-        ctx_type != :resource
+        ctx.type != :resource
       else false
       end
 
@@ -101,8 +113,8 @@ private
   end
 
 
-  def self.[](definition)
-    dsl = self.new
+  def self.[](definition, opts = {})
+    dsl = self.new(opts)
     dsl.instance_eval(&definition)
     dsl.instance_variable_get('@resources')
   end
