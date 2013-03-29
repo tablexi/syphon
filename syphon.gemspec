@@ -8,8 +8,8 @@ Gem::Specification.new do |gem|
   gem.version       = Syphon::VERSION
   gem.authors       = ["Alex Skryl"]
   gem.email         = ["rut216@gmail.com"]
-  gem.description   = %q{A tool for building bolton JSON APIs}
-  gem.summary       = %q{Quick and dirty JSON API}
+  gem.description   = %q{A tool for adding discoverable HATEOAS JSON APIs to your Rails 3 app}
+  gem.summary       = %q{Bolt-on HATEOAS JSON API DSL}
   gem.homepage      = ""
 
   gem.files         = `git ls-files`.split($/)
@@ -17,5 +17,5 @@ Gem::Specification.new do |gem|
   gem.test_files    = gem.files.grep(%r{^(test|spec|features)/})
   gem.require_paths = ["lib"]
 
-  gem.add_dependency('activesupport')
+  gem.add_dependency('activesupport', '~> 3.2.0')
 end
