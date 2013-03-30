@@ -2,7 +2,7 @@ class Syphon::Api::Resource
 
   ACTIONS = [ :index, :show, :create, :update, :destroy].freeze
 
-  attr_accessor :model, :controller, :fields, :resources, :collections
+  attr_accessor :api, :model, :controller, :fields, :resources, :collections
   attr_reader   :name, :namespace, :super_controller, :allowed_actions, :disallowed_actions
 
   def initialize(name, context, opts = {})
@@ -10,6 +10,7 @@ class Syphon::Api::Resource
     @namespace = context.namespace[1..-1] # remove leading slash
     @super_controller = context.super_controller # can be nil
     @fields, @resources, @collections = [], [], []
+    @uri = "/#{@namespace}/#{@name}"
 
     @allowed_actions = ACTIONS && (opts[:only] || ACTIONS) - (opts[:except] || [])
     @disallowed_actions = ACTIONS - allowed_actions
@@ -19,8 +20,7 @@ class Syphon::Api::Resource
     return if controller_class
 
     model_proxy = Class.new(Syphon::Api::ModelProxy)
-    model_proxy.model = model_class
-    model_proxy.fields = fields
+    model_proxy.configure_for_resource(self)
     controller = Class.new(super_controller_class || ActionController::Base)
     controller.send(:include, Syphon::Api::CRUDController)
     controller.model_proxy = model_proxy
@@ -39,6 +39,30 @@ class Syphon::Api::Resource
     end
   end
 
+  [:controller, :super_controller].each do |attr|
+    send(:define_method, "#{attr}_name") do
+      camelize_controller(instance_variable_get("@#{attr}"))
+    end
+
+    send(:define_method, "#{attr}_class") do
+      constantize(namespace_class( send("#{attr}_name")))
+    end
+  end
+
+  def model_class
+    constantize(@model.to_s.classify)
+  end
+
+  # uri helpers
+
+  def collection_uri
+    @uri
+  end
+
+  def resource_uri(id)
+    "#{@uri}/#{id}"
+  end
+
 private
 
   def module_namespace
@@ -53,20 +77,6 @@ private
         mod.const_set(name, Module.new)
       end
     end
-  end
-
-  [:controller, :super_controller].each do |attr|
-    send(:define_method, "#{attr}_name") do
-      camelize_controller(instance_variable_get("@#{attr}"))
-    end
-
-    send(:define_method, "#{attr}_class") do
-      constantize(namespace_class( send("#{attr}_name")))
-    end
-  end
-
-  def model_class
-    constantize(@model.to_s.classify)
   end
 
   # inflection

@@ -19,7 +19,7 @@ class Syphon::DSLContext
     @resource_class = opts[:resource_class] || Syphon::Api::Resource 
     expose_allowed_commands
 
-    @resources = []
+    @resources = {}
     @context = Context.new(nil, :root, '')
     @context_stack = []
   end
@@ -33,7 +33,7 @@ class Syphon::DSLContext
   def resource(name, opts = {}, &block)
     new_context :resource, block do
       ctx.resource = @resource_class.new(name, ctx, opts)
-      @resources << ctx.resource
+      @resources[name] = ctx.resource
     end
   end
 

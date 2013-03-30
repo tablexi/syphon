@@ -16,11 +16,12 @@ class Syphon::Api
 
     def api(&definition)
       @resources = Syphon::DSLContext[definition, resource_class: Syphon::Api::Resource]
+      @resources.each { |n, r| r.api = self } # hack, figure out a better way to backreference
     end
 
     def draw_routes!(application)
       return if @resources.empty?
-      @resources.each do |resource|
+      @resources.each do |name, resource|
         resource.build_controller
         resource.draw_route(application)
       end
