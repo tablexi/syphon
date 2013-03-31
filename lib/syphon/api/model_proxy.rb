@@ -3,7 +3,10 @@ class Syphon::Api::ModelProxy
 
     def all(conditions = [])
       conditions ||= []
-      conditions.sort_by! { |v| v.is_a?(Hash) ? 0 : 1 } # query conditions must come first
+
+      # query conditions must come first
+      conditions.sort_by! { |v| v.is_a?(Hash) ? 0 : 1 }
+
       results = conditions.reduce(@model.select(@columns)) do |query, cond|
         case cond
         when Hash
@@ -12,6 +15,7 @@ class Syphon::Api::ModelProxy
           query.send(cond)
         end
       end
+
       results.map { |o| link o }
     end
 
@@ -33,7 +37,7 @@ class Syphon::Api::ModelProxy
     end
 
     def configure_for_resource(resource)
-      @api = resource.api
+      @resource_set = resource.resource_set
       @model = resource.model_class
       @fields = resource.fields
       @resources = resource.resources
@@ -44,14 +48,13 @@ class Syphon::Api::ModelProxy
 
   private
 
-    # TODO: why send the full hyperlink? a query hash or id would be easier
+    # FIXME: why send the full hyperlink? a query hash or id would be easier
     #
     def link(object)
-      api_resources = @api.resources
       attributes = object.attributes
 
       @resources.each do |name|
-        resource = api_resources[pluralize(name)]
+        resource = @resource_set[pluralize(name)]
         resource_id = object.send(name).id
         # attributes[name] = resource.resource_uri(resource_id)
         attributes[name] = resource_id
@@ -59,7 +62,7 @@ class Syphon::Api::ModelProxy
       end
 
       @collections.each do |name|
-        resource = api_resources[name]
+        resource = @resource_set[name]
         # attributes[name] = "#{resource.collection_uri}?#{resource_query(object.id).to_query}"
         attributes[name] = resource_query(object.id)
       end

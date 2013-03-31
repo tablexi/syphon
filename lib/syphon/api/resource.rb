@@ -1,19 +1,13 @@
-class Syphon::Api::Resource
+class Syphon::Api::Resource < Syphon::Resource
 
-  ACTIONS = [ :index, :show, :create, :update, :destroy].freeze
+  attr_accessor :model, :controller
+  attr_reader   :super_controller
 
-  attr_accessor :api, :model, :controller, :fields, :resources, :collections
-  attr_reader   :name, :namespace, :super_controller, :allowed_actions, :disallowed_actions
-
-  def initialize(name, context, opts = {})
-    @name = @model = @controller = name
-    @namespace = context.namespace[1..-1] # remove leading slash
+  def initialize(name, resource_set, context, opts = {})
+    super
+    @model = name
+    @controller = name
     @super_controller = context.super_controller # can be nil
-    @fields, @resources, @collections = [], [], []
-    @uri = "/#{@namespace}/#{@name}"
-
-    @allowed_actions = ACTIONS && (opts[:only] || ACTIONS) - (opts[:except] || [])
-    @disallowed_actions = ACTIONS - allowed_actions
   end
 
   def build_controller
@@ -25,7 +19,7 @@ class Syphon::Api::Resource
     controller.send(:include, Syphon::Api::CRUDController)
     controller.model_proxy = model_proxy
 
-    module_namespace.const_set(controller_name, controller)
+    namespaced_module.const_set(controller_name, controller)
   end
 
   def draw_route(application)
@@ -51,55 +45,6 @@ class Syphon::Api::Resource
 
   def model_class
     constantize(@model.to_s.classify)
-  end
-
-  # uri helpers
-
-  def collection_uri
-    @uri
-  end
-
-  def resource_uri(id)
-    "#{@uri}/#{id}"
-  end
-
-private
-
-  def module_namespace
-    module_name = @namespace.camelize
-    mod = constantize(module_name)
-
-    if mod
-      return mod
-    else
-      modules = module_name.split('::').reverse
-      modules.reduce(Object) do |mod, name|
-        mod.const_set(name, Module.new)
-      end
-    end
-  end
-
-  # inflection
-
-  def camelize(name)
-    name.to_s.camelize
-  end
-
-  def camelize_controller(name)
-    "#{camelize(name)}Controller"
-  end
-
-  def namespace_class(name)
-    "#{@namespace.camelize}::#{name}"
-  end
-
-  # Fixes stupid safe_constantize behavior where
-  # "NS1::NS2::SomeClass".safe_constantize returns 
-  # ::SomeClass if it exists
-  #
-  def constantize(name)
-    const = name.safe_constantize
-    const.to_s == name ? const : nil
   end
 
 end

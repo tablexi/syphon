@@ -1,12 +1,17 @@
-class Syphon::DSLContext
+class Syphon::ResourceDSL
 
-  CONTEXT_VARS = :type, :namespace, :super_controller, :resource
+  class Context < OpenStruct
+    def initialize(type, parent)
+      super()
+      self.type  = type
+      self.parent = parent
+    end
 
-  class Context < Struct.new(:parent, *CONTEXT_VARS)
     # emulate lexical scoping
-    CONTEXT_VARS.each do |reader|
-      send(:define_method, reader) do
-        super() || (parent && parent.send(reader))
+    def method_missing(meth, *args, &block)
+      case (meth.to_s[-1] == ?=)
+      when true; super
+      else super || (parent && parent.send(meth))
       end
     end
   end
@@ -15,12 +20,13 @@ class Syphon::DSLContext
   alias_method :ctx, :context
 
   def initialize(opts = {})
-    @allowed_commands = opts[:commands]
+    @valid_commands = opts[:commands]
     @resource_class = opts[:resource_class] || Syphon::Api::Resource 
-    expose_allowed_commands
+    expose_valid_commands
 
     @resources = {}
-    @context = Context.new(nil, :root, '')
+    @context = Context.new(:root, nil)
+    @context.namespace = ''
     @context_stack = []
   end
 
@@ -32,7 +38,7 @@ class Syphon::DSLContext
 
   def resource(name, opts = {}, &block)
     new_context :resource, block do
-      ctx.resource = @resource_class.new(name, ctx, opts)
+      ctx.resource = @resource_class.new(name, @resources, ctx, opts)
       @resources[name] = ctx.resource
     end
   end
@@ -63,10 +69,12 @@ class Syphon::DSLContext
 
 private
 
-  def expose_allowed_commands
-    return unless @allowed_commands
+  # hide all unsupported DSL commands
+  #
+  def expose_valid_commands
+    return unless @valid_commands
     private_commands = \
-      public_methods(false) - @allowed_commands
+      public_methods(false) - @valid_commands
     private_commands.each do |command|
       singleton_class.class_eval do
         private(command)
@@ -74,6 +82,8 @@ private
     end
   end
 
+  # create a new context frame
+  #
   def new_context(type, proc = nil)
     create_new_context(type)
 
@@ -88,7 +98,7 @@ private
 
   def create_new_context(type)
     check_context_nesting(type)
-    new_context = Context.new(@context, type)
+    new_context = Context.new(type, @context)
     @context_stack.push(@context)
     @context = new_context
   end
@@ -109,10 +119,12 @@ private
       else false
       end
 
-    raise "You cannot call '#{new_context}' inside a '#{context}' block" if error
+    raise "You cannot call '#{new_context_type}' inside a '#{ctx.type}' block" if error
   end
 
 
+  # init helper
+  #
   def self.[](definition, opts = {})
     dsl = self.new(opts)
     dsl.instance_eval(&definition)

@@ -1,6 +1,8 @@
 require 'json'
+require 'ostruct'
 require 'active_support'
-require 'syphon/dsl_context'
+require 'syphon/common/resource'
+require 'syphon/common/resource_dsl'
 require 'syphon/core_ext/action_dispatch'
 
 class Syphon::Api
@@ -15,8 +17,7 @@ class Syphon::Api
     attr_accessor :resources
 
     def api(&definition)
-      @resources = Syphon::DSLContext[definition, resource_class: Syphon::Api::Resource]
-      @resources.each { |n, r| r.api = self } # hack, figure out a better way to backreference
+      @resources = Syphon::ResourceDSL[definition, resource_class: Syphon::Api::Resource]
     end
 
     def draw_routes!(application)

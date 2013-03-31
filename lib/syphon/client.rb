@@ -1,15 +1,15 @@
 require 'json'
 require 'ostruct'
-require 'syphon/dsl_context'
+require 'syphon/common/resource'
+require 'syphon/common/resource_dsl'
 
 class Syphon::Client
   autoload :Resource, 'syphon/client/resource'
 
   def api(&definition)
-    @resources = Syphon::DSLContext[definition, 
+    @resources = Syphon::ResourceDSL[definition, 
       resource_class: Syphon::Client::Resource,
       commands: [:namespace, :resource, :resources, :collections]]
-    @resources.each { |n, r| r.api = self } # hack, figure out a better way to backreference
 
     add_resource_actions
   end

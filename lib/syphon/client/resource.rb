@@ -1,6 +1,4 @@
-class Syphon::Client::Resource
-
-  ACTIONS = [ :index, :show, :create, :update, :destroy ].freeze
+class Syphon::Client::Resource < Syphon::Resource
 
   ACTION_MAP = { index:  [:all, :first],
                  show:   [:find],
@@ -8,18 +6,10 @@ class Syphon::Client::Resource
                  update: [:update],
                  destroy: [:destroy] }.freeze
 
-  attr_accessor :api, :agent, :fields, :resources, :collections
-  attr_reader   :name, :namespace, :allowed_actions, :disallowed_actions
+  attr_accessor :agent
 
-  def initialize(name, context, opts = {})
-    @name = name
-    @namespace = context.namespace[1..-1] # remove leading slash
-    @uri = "/#{@namespace}/#{@name}"
-    @resources, @collections = [], []
-
-    @allowed_actions = ACTIONS && (opts[:only] || ACTIONS) - (opts[:except] || [])
-    @disallowed_actions = ACTIONS - allowed_actions
-
+  def initialize(name, resource_set, context, opts = {})
+    super
     expose_allowed_actions
   end
 
@@ -63,28 +53,7 @@ private
   
   def expose_allowed_actions
     add_actions(@allowed_actions) do |a, m, args| 
-      response = send("_#{m}", *args)
-
-      @resources.each do |resource|
-        params = response[resource.to_s]
-        response[resource] = lambda { @api.resources[pluralize(resource)].find(params) }
-      end
-
-      @collections.each do |collection|
-        params = response[collection.to_s]
-        response[collection] = lambda { @api.resources[collection.to_sym].all(params) }
-      end
-
-      wrapper = OpenStruct.new(response)
-
-      (@resources + @collections).each do |reader|
-        old_method = wrapper.method(reader)
-        wrapper.define_singleton_method(reader) do
-          old_method.call.call
-        end
-      end
-
-      wrapper
+      wrap_response(send("_#{m}", *args))
     end
 
     add_actions(@disallowed_actions) do |a, m, args| 
@@ -107,20 +76,29 @@ private
     raise "#{action.upcase} is unsupported for this resource"
   end
 
-  # uri helpers
+  # FIXME: needs work
+  #
+  def wrap_response(response)
+    @resources.each do |resource|
+      params = response[resource.to_s]
+      response[resource] = lambda { @resource_set[pluralize(resource)].find(params) }
+    end
 
-  def collection_uri
-    @uri
-  end
+    @collections.each do |collection|
+      params = response[collection.to_s]
+      response[collection] = lambda { @resource_set[collection.to_sym].all(params) }
+    end
 
-  def resource_uri(id)
-    "#{@uri}/#{id}"
-  end
+    wrapper = OpenStruct.new(response)
 
-  # inflections
+    (@resources + @collections).each do |reader|
+      old_method = wrapper.method(reader)
+      wrapper.define_singleton_method(reader) do
+        old_method.call.call
+      end
+    end
 
-  def pluralize(name)
-    "#{name}s".to_sym
+    wrapper
   end
 
 end
