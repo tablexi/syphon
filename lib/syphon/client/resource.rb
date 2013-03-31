@@ -8,10 +8,10 @@ class Syphon::Client::Resource < Syphon::Resource
     def to_s; @table.to_s end
   end
 
-  METHOD_MAP = { index:  [:all, :first],
-                 show:   [:find],
-                 create: [:create],
-                 update: [:update],
+  METHOD_MAP = { index:   [:all, :first],
+                 show:    [:find],
+                 create:  [:create],
+                 update:  [:update],
                  destroy: [:destroy] }.freeze
 
   attr_accessor :agent

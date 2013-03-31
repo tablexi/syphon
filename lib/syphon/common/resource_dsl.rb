@@ -128,12 +128,30 @@ private
 
   # init helper
   #
-  def self.[](definition, opts = {})
-    dsl = self.new(opts)
-    dsl.instance_eval(&definition)
-    resources = dsl.instance_variable_get('@resources')
+  def self.[](config, opts = {}, &definition)
+    resources = {}
+    resources.merge!(from_config(config, opts)) if config
+    resources.merge!(from_proc(definition, opts)) if definition
     resources.each { |n, r| r.finalize! }
     resources
+  end
+
+  def self.from_config(config, opts)
+    resource_class = opts[:resource_class] || Syphon::Api::Resource
+
+    config.reduce({}) do |resources, conf|
+      conf = OpenStruct.new(conf)
+      conf.only.map!(&:to_sym)
+      resources[conf.name] = \
+        resource_class.new(conf.name, resources, conf)
+      resources
+    end
+  end
+
+  def self.from_proc(definition, opts)
+    dsl = self.new(opts)
+    dsl.instance_eval(&definition)
+    dsl.instance_variable_get('@resources')
   end
 
 end

@@ -4,30 +4,16 @@ require 'syphon/common/resource_dsl'
 class Syphon::Client
   autoload :Resource, 'syphon/client/resource'
 
-  def api(&definition)
-    @resources = Syphon::ResourceDSL[definition, 
-      resource_class: Syphon::Client::Resource,
-      commands: [:namespace, :resources, :resource, :collection]]
+  def api(config = nil, &definition)
+    @resources = Syphon::ResourceDSL[config,
+      { resource_class: Syphon::Client::Resource,
+        commands: [:namespace, :resources, :resource, :collection] },
+      &definition]
 
     add_resource_actions
   end
 
-  # TODO: move to DSL class and clean up
-  #
-  def configure_for_syphon_service(config)
-    @resources = {}
-    config.each do |rconf|
-      rconf = OpenStruct.new(rconf)
-      opts = { only: rconf.allowed_actions.map {|a| a.to_sym} }
-      rsrc = Syphon::Client::Resource.new(rconf.name, @resources, rconf, opts)
-      rsrc.resources = rconf.resources
-      rsrc.collections = rconf.collections
-      @resources[rconf.name] = rsrc
-    end
-
-    @resources.each { |n,r| r.finalize! }
-    add_resource_actions
-  end
+  alias_method :discover, :api
 
 private
 

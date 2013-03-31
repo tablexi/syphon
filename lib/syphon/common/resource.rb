@@ -12,11 +12,15 @@ class Syphon::Resource
     @name = name
     @resource_set = resource_set
 
-    @fields, @resources, @collections = [], [], []
+    @fields = context.fields || [] 
+    @resources = context.resources || [] 
+    @collections = context.collections || []
 
     @namespace = context.namespace[1..-1] # remove leading slash
     @uri = "/#{@namespace}/#{@name}"
 
+    only = context.only || opts[:only]
+    except = context.except || opts[:except]
     @allowed_actions = ACTIONS && (opts[:only] || ACTIONS) - (opts[:except] || [])
     @disallowed_actions = ACTIONS - allowed_actions
   end
@@ -37,18 +41,18 @@ class Syphon::Resource
     @collection_name ||= to_collection_name(@name)
   end
 
-  def finalize!
-    map_resource_associations!
-  end
-
   def serialize
     {
       name: @name,
       namespace: "/#{@namespace}",
       resources: @resources.map { |r| r.name },
       collections: @collections.map { |r| r.name }, 
-      allowed_actions: @allowed_actions
+      only: @allowed_actions
     }
+  end
+
+  def finalize!
+    map_resource_associations!
   end
 
 private
