@@ -29,7 +29,7 @@ private
   # index
   #
   def _all(*conditions)
-    agent.get(collection_uri, query: { conditions: conditions }).map { |r| wrap_response(r) }
+    wrap_responses agent.get(collection_uri, query: { conditions: conditions })
   end
 
   def _first(*conditions)
@@ -87,19 +87,21 @@ private
     raise "#{action.upcase} is unsupported for this resource"
   end
 
+protected
+
   def wrap_response(response)
-    return response if response['exception']
+    return response if !response.is_a?(Hash) || response['exception']
 
     finders = []
 
     @resources.each do |resource|
       name = resource.resource_name
-      relation_id = response[name]
+      relation_uri = response[name]
 
       response[name] = \
-        if relation_id
+        if relation_uri
           finders << name
-          lambda { resource.find(relation_id) }
+          lambda { resource.wrap_response agent.get(relation_uri) }
         else nil
         end
     end
@@ -111,7 +113,7 @@ private
       response[name] = \
         unless query.empty?
           finders << name
-          lambda { resource.all(query) }
+          lambda { resource.wrap_responses agent.get(query) }
         else query
         end
     end
@@ -126,6 +128,13 @@ private
     end
 
     wrapper
+  end
+
+  # FIXME: don't wrap in array for all
+  def wrap_responses(response)
+    return [response] if !response.is_a?(Array)
+
+    response.map { |r| wrap_response r }
   end
 
 end

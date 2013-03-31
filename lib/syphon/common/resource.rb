@@ -41,6 +41,16 @@ class Syphon::Resource
     map_resource_associations!
   end
 
+  def serialize
+    {
+      name: @name,
+      namespace: "/#{@namespace}",
+      resources: @resources.map { |r| r.name },
+      collections: @collections.map { |r| r.name }, 
+      allowed_actions: @allowed_actions
+    }
+  end
+
 private
 
   def map_resource_associations!

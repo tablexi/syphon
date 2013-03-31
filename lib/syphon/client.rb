@@ -12,6 +12,23 @@ class Syphon::Client
     add_resource_actions
   end
 
+  # TODO: move to DSL class and clean up
+  #
+  def configure_for_syphon_service(config)
+    @resources = {}
+    config.each do |rconf|
+      rconf = OpenStruct.new(rconf)
+      opts = { only: rconf.allowed_actions.map {|a| a.to_sym} }
+      rsrc = Syphon::Client::Resource.new(rconf.name, @resources, rconf, opts)
+      rsrc.resources = rconf.resources
+      rsrc.collections = rconf.collections
+      @resources[rconf.name] = rsrc
+    end
+
+    @resources.each { |n,r| r.finalize! }
+    add_resource_actions
+  end
+
 private
 
   def add_resource_actions

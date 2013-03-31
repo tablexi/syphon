@@ -68,7 +68,7 @@ class Syphon::Api::ModelProxy
         name = resource.resource_name
         attributes[name] = \
           if (relation = object.send(name))
-            relation.send(relation.class.primary_key)
+            resource.resource_uri(relation.send(relation.class.primary_key))
           else nil
           end
       end
@@ -78,7 +78,8 @@ class Syphon::Api::ModelProxy
         attributes[name] = \
           if (relation = object.send(name).any?)
             fkey = foreign_key_for_assoc(name)
-            resource_query(fkey, object.send(fkey))
+            pkey = (fkey == "#{@name}_id" ? :id : fkey)
+            "#{resource.collection_uri}?#{resource_query(fkey, object.send(pkey))}"
           else []
           end
       end
@@ -87,7 +88,7 @@ class Syphon::Api::ModelProxy
     end
 
     def resource_query(fkey, id)
-      {where: { fkey => id }}
+      {where: { fkey => id }}.to_query
     end
 
   end

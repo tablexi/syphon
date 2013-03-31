@@ -132,7 +132,7 @@ private
     dsl = self.new(opts)
     dsl.instance_eval(&definition)
     resources = dsl.instance_variable_get('@resources')
-    resources.map { |n, r| r.finalize! }
+    resources.each { |n, r| r.finalize! }
     resources
   end
 

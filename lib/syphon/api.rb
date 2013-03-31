@@ -25,5 +25,18 @@ class Syphon::Api
       end
     end
 
+    # pretend we're a Rack app so rails can route to us :)
+    #
+    def draw_discovery_route!(application, path)
+      api = self
+      application.routes.draw do
+        match path => proc { |env| [200, {"Content-TYpe" => 'application/json'}, [api.resource_map.to_json]] }
+      end
+    end
+
+    def resource_map
+      @resource_map ||= @resources.map { |n, r| r.serialize }
+    end
+
   end
 end
