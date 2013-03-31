@@ -1,6 +1,3 @@
-require 'json'
-require 'ostruct'
-require 'active_support'
 require 'syphon/common/resource'
 require 'syphon/common/resource_dsl'
 require 'syphon/core_ext/action_dispatch'
@@ -23,8 +20,8 @@ class Syphon::Api
     def draw_routes!(application)
       return if @resources.empty?
       @resources.each do |name, resource|
-        resource.build_controller
-        resource.draw_route(application)
+        resource.build_controller!
+        resource.draw_route!(application)
       end
     end
 

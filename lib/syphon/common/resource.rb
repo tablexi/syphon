@@ -1,3 +1,6 @@
+require 'active_support'
+require 'active_support/core_ext/string/inflections'
+
 class Syphon::Resource
 
   ACTIONS = [ :index, :show, :create, :update, :destroy].freeze
@@ -8,7 +11,6 @@ class Syphon::Resource
   def initialize(name, resource_set, context, opts = {})
     @name = name
     @resource_set = resource_set
-    @context = context
 
     @fields, @resources, @collections = [], [], []
 
@@ -19,8 +21,6 @@ class Syphon::Resource
     @disallowed_actions = ACTIONS - allowed_actions
   end
 
-  # uri helpers
-
   def collection_uri
     @uri
   end
@@ -29,47 +29,38 @@ class Syphon::Resource
     "#{@uri}/#{id}"
   end
 
+  def resource_name
+    @resource_name ||= to_resource_name(@name)
+  end
+
+  def collection_name
+    @collection_name ||= to_collection_name(@name)
+  end
+
+  def finalize!
+    map_resource_associations!
+  end
+
 private
 
-  def namespaced_module
-    module_name = @namespace.camelize
-    mod = constantize(module_name)
-
-    if mod
-      return mod
-    else
-      modules = module_name.split('::').reverse
-      modules.reduce(Object) do |mod, name|
-        mod.const_set(name, Module.new)
-      end
-    end
+  def map_resource_associations!
+    map_associations!(@resources)
+    map_associations!(@collections)
   end
 
-  # inflection
-
-  def camelize(name)
-    name.to_s.camelize
+  def map_associations!(resources)
+    resources.map! do |resource|
+      @resource_set[to_collection_name(resource)] || 
+      @resource_set[to_resource_name(resource)]
+    end.compact!
   end
 
-  def pluralize(name)
-    "#{name}s".to_sym
+  def to_resource_name(name)
+    name.to_s.singularize
   end
 
-  def camelize_controller(name)
-    "#{camelize(name)}Controller"
-  end
-
-  def namespace_class(name)
-    "#{@namespace.camelize}::#{name}"
-  end
-
-  # Fixes stupid safe_constantize behavior where
-  # "NS1::NS2::SomeClass".safe_constantize returns 
-  # ::SomeClass if it exists
-  #
-  def constantize(name)
-    const = name.safe_constantize
-    const.to_s == name ? const : nil
+  def to_collection_name(name)
+    name.to_s.pluralize
   end
 
 end

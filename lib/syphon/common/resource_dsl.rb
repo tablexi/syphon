@@ -1,3 +1,6 @@
+require 'ostruct'
+require 'active_support/hash_with_indifferent_access'
+
 class Syphon::ResourceDSL
 
   class Context < OpenStruct
@@ -24,7 +27,7 @@ class Syphon::ResourceDSL
     @resource_class = opts[:resource_class] || Syphon::Api::Resource 
     expose_valid_commands
 
-    @resources = {}
+    @resources = HashWithIndifferentAccess.new
     @context = Context.new(:root, nil)
     @context.namespace = ''
     @context_stack = []
@@ -36,8 +39,8 @@ class Syphon::ResourceDSL
     end
   end
 
-  def resource(name, opts = {}, &block)
-    new_context :resource, block do
+  def resources(name, opts = {}, &block)
+    new_context :resources, block do
       ctx.resource = @resource_class.new(name, @resources, ctx, opts)
       @resources[name] = ctx.resource
     end
@@ -50,7 +53,7 @@ class Syphon::ResourceDSL
     case ctx.type
     when :root, :namespace
       ctx.super_controller = klass
-    when :resource
+    when :resources
       ctx.resource.controller = klass
     end
   end
@@ -60,10 +63,10 @@ class Syphon::ResourceDSL
     ctx.resource.model = klass
   end
 
-  [:fields, :resources, :collections].each do |method|
+  [:field, :resource, :collection].each do |method|
     send(:define_method, method) do |*val|
       check_context_nesting(:inner)
-      ctx.resource.send("#{method}=", val)
+      ctx.resource.send("#{method}s=", val)
     end
   end
 
@@ -112,10 +115,10 @@ private
       case new_context_type
       when :namespace
         ctx.type != :root && ctx.type != :namespace
-      when :resource
+      when :resources
         ctx.type != :root && ctx.type != :namespace 
       when :inner
-        ctx.type != :resource
+        ctx.type != :resources
       else false
       end
 
@@ -128,7 +131,9 @@ private
   def self.[](definition, opts = {})
     dsl = self.new(opts)
     dsl.instance_eval(&definition)
-    dsl.instance_variable_get('@resources')
+    resources = dsl.instance_variable_get('@resources')
+    resources.map { |n, r| r.finalize! }
+    resources
   end
 
 end

@@ -1,6 +1,14 @@
+require 'json'
+require 'ostruct'
+
 class Syphon::Client::Resource < Syphon::Resource
 
-  ACTION_MAP = { index:  [:all, :first],
+  class ResponseWrapper < OpenStruct
+    def inspect; @table.inspect end
+    def to_s; @table.to_s end
+  end
+
+  METHOD_MAP = { index:  [:all, :first],
                  show:   [:find],
                  create: [:create],
                  update: [:update],
@@ -10,6 +18,9 @@ class Syphon::Client::Resource < Syphon::Resource
 
   def initialize(name, resource_set, context, opts = {})
     super
+    @response_wrapper = \
+      self.class.const_set(resource_name.classify, Class.new(ResponseWrapper))
+
     expose_allowed_actions
   end
 
@@ -18,7 +29,7 @@ private
   # index
   #
   def _all(*conditions)
-    agent.get(collection_uri, query: { conditions: conditions })
+    agent.get(collection_uri, query: { conditions: conditions }).map { |r| wrap_response(r) }
   end
 
   def _first(*conditions)
@@ -28,13 +39,13 @@ private
   # show
   #
   def _find(id)
-    agent.get(resource_uri(id))
+    wrap_response agent.get(resource_uri(id))
   end
 
   # create
   #
   def _create(attributes = {})
-    agent.post(collection_uri, body: { attributes: attributes }.to_json)
+    wrap_response agent.post(collection_uri, body: { attributes: attributes }.to_json)
   end
 
   # update
@@ -53,7 +64,7 @@ private
   
   def expose_allowed_actions
     add_actions(@allowed_actions) do |a, m, args| 
-      wrap_response(send("_#{m}", *args))
+      send("_#{m}", *args)
     end
 
     add_actions(@disallowed_actions) do |a, m, args| 
@@ -63,7 +74,7 @@ private
 
   def add_actions(actions)
     actions.each do |action|
-      methods = ACTION_MAP[action]
+      methods = METHOD_MAP[action]
       methods.each do |method|
         define_singleton_method(method) do |*args|
           yield(action, method, args)
@@ -76,24 +87,40 @@ private
     raise "#{action.upcase} is unsupported for this resource"
   end
 
-  # FIXME: needs work
-  #
   def wrap_response(response)
+    return response if response['exception']
+
+    finders = []
+
     @resources.each do |resource|
-      params = response[resource.to_s]
-      response[resource] = lambda { @resource_set[pluralize(resource)].find(params) }
+      name = resource.resource_name
+      relation_id = response[name]
+
+      response[name] = \
+        if relation_id
+          finders << name
+          lambda { resource.find(relation_id) }
+        else nil
+        end
     end
 
-    @collections.each do |collection|
-      params = response[collection.to_s]
-      response[collection] = lambda { @resource_set[collection.to_sym].all(params) }
+    @collections.each do |resource|
+      name = resource.collection_name
+      query = response[name]
+
+      response[name] = \
+        unless query.empty?
+          finders << name
+          lambda { resource.all(query) }
+        else query
+        end
     end
 
-    wrapper = OpenStruct.new(response)
+    wrapper = @response_wrapper.new(response)
 
-    (@resources + @collections).each do |reader|
-      old_method = wrapper.method(reader)
-      wrapper.define_singleton_method(reader) do
+    finders.each do |finder|
+      old_method = wrapper.method(finder)
+      wrapper.define_singleton_method(finder) do
         old_method.call.call
       end
     end

@@ -37,53 +37,57 @@ class Syphon::Api::ModelProxy
     end
 
     def configure_for_resource(resource)
-      @resource_set = resource.resource_set
-      @model = resource.model_class
+      @name = resource.resource_name
+      @model = resource.model_klass
       @fields = resource.fields
       @resources = resource.resources
       @collections = resource.collections
-
-      @columns = @fields + resource_fields
+      @resource_set = resource.resource_set
+      @columns = @fields + foreign_keys
     end
 
   private
 
-    # FIXME: why send the full hyperlink? a query hash or id would be easier
+    def foreign_keys
+      @model.reflect_on_all_associations.select { |a| 
+        a.macro == :belongs_to }.map { |a| 
+          (a.options[:foreign_key] || "#{a.name}_id").to_s }
+    end
+
+    def foreign_key_for_assoc(assoc)
+      assoc = @model.reflect_on_all_associations.detect { |a| a.name == assoc.to_sym }
+      (assoc && assoc.options[:foreign_key] || "#{@name}_id").to_s
+    end
+
+    # FIXME: these should return full urls for other clients to consume
     #
     def link(object)
       attributes = object.attributes
 
-      @resources.each do |name|
-        resource = @resource_set[pluralize(name)]
-        resource_id = object.send(name).id
-        # attributes[name] = resource.resource_uri(resource_id)
-        attributes[name] = resource_id
-        attributes.delete(fkey(name)) if attributes.key?(fkey(name))
+      @resources.each do |resource|
+        name = resource.resource_name
+        attributes[name] = \
+          if (relation = object.send(name))
+            relation.send(relation.class.primary_key)
+          else nil
+          end
       end
 
-      @collections.each do |name|
-        resource = @resource_set[name]
-        # attributes[name] = "#{resource.collection_uri}?#{resource_query(object.id).to_query}"
-        attributes[name] = resource_query(object.id)
+      @collections.each do |resource|
+        name = resource.collection_name
+        attributes[name] = \
+          if (relation = object.send(name).any?)
+            fkey = foreign_key_for_assoc(name)
+            resource_query(fkey, object.send(fkey))
+          else []
+          end
       end
 
-      attributes
+      attributes.except(*foreign_keys)
     end
 
-    def pluralize(name)
-      name.to_s.pluralize.to_sym
-    end
-
-    def resource_fields
-     (@resources.map { |r| fkey(r) } & @model.column_names)
-    end
-
-    def fkey(resource_name)
-      "#{resource_name}_id"
-    end
-
-    def resource_query(id)
-      {where: { "#{@model.name.downcase}_id" => id }}
+    def resource_query(fkey, id)
+      {where: { fkey => id }}
     end
 
   end

@@ -1,5 +1,3 @@
-require 'json'
-require 'ostruct'
 require 'syphon/common/resource'
 require 'syphon/common/resource_dsl'
 
@@ -9,7 +7,7 @@ class Syphon::Client
   def api(&definition)
     @resources = Syphon::ResourceDSL[definition, 
       resource_class: Syphon::Client::Resource,
-      commands: [:namespace, :resource, :resources, :collections]]
+      commands: [:namespace, :resources, :resource, :collection]]
 
     add_resource_actions
   end
