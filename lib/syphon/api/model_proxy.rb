@@ -59,7 +59,7 @@ class Syphon::Api::ModelProxy
       (assoc && assoc.options[:foreign_key] || "#{@name}_id").to_s
     end
 
-    # FIXME: these should return full urls for other clients to consume
+    # FIXME: clean this up
     #
     def link(object)
       return unless object

@@ -94,6 +94,8 @@ private
 
 protected
 
+  # FIXME: clean this up
+  #
   def wrap_response(response)
     return response if !response.is_a?(Hash) || response['exception']
 
@@ -136,6 +138,7 @@ protected
   end
 
   # FIXME: don't wrap in array for all
+  #
   def wrap_responses(response)
     return [response] if !response.is_a?(Array)
 
