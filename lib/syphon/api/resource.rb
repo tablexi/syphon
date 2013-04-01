@@ -21,7 +21,7 @@ class Syphon::Api::Resource < Syphon::Resource
     application.routes.draw do
       nested_namespace(resource.namespace.split('/')) do
         resources resource.name, :controller => resource.controller, 
-                                 :only => resource.allowed_actions
+                                 :only => resource.only
       end
     end
   end

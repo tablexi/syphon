@@ -15,9 +15,11 @@ class Syphon::Client::Resource < Syphon::Resource
                  destroy: [:destroy] }.freeze
 
   attr_accessor :agent
+  attr_reader   :actions
 
   def initialize(name, resource_set, context, opts = {})
     super
+    @actions = []
     @response_wrapper = \
       self.class.const_set(resource_name.classify, Class.new(ResponseWrapper))
 
@@ -63,19 +65,22 @@ private
   # action helpers
   
   def expose_allowed_actions
-    add_actions(@allowed_actions) do |a, m, args| 
+    add_actions(@only, @actions) do |a, m, args| 
       send("_#{m}", *args)
     end
 
-    add_actions(@disallowed_actions) do |a, m, args| 
+    add_actions(@except) do |a, m, args| 
       raise_unsupported(a)
     end
   end
 
-  def add_actions(actions)
+  # FIXME: refactor out the coll crap
+  #
+  def add_actions(actions, coll = [])
     actions.each do |action|
       methods = METHOD_MAP[action]
       methods.each do |method|
+        coll << method
         define_singleton_method(method) do |*args|
           yield(action, method, args)
         end

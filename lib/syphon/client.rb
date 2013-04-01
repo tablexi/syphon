@@ -15,6 +15,10 @@ class Syphon::Client
 
   alias_method :discover, :api
 
+  def resource_names
+    @resources.map { |n, r| n }
+  end
+
 private
 
   def add_resource_actions

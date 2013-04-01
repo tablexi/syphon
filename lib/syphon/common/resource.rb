@@ -3,9 +3,10 @@ require 'active_support/core_ext/string/inflections'
 
 class Syphon::Resource
 
+  HIDDEN_INSTANCE_VARS = [:@resource_set, :@resources, :@collections].freeze
   ACTIONS = [ :index, :show, :create, :update, :destroy].freeze
 
-  attr_reader   :name, :resource_set, :namespace, :allowed_actions, :disallowed_actions
+  attr_reader   :name, :resource_set, :namespace, :only, :except
   attr_accessor :fields, :resources, :collections
 
   def initialize(name, resource_set, context, opts = {})
@@ -19,10 +20,10 @@ class Syphon::Resource
     @namespace = context.namespace[1..-1] # remove leading slash
     @uri = "/#{@namespace}/#{@name}"
 
-    only = context.only || opts[:only]
-    except = context.except || opts[:except]
-    @allowed_actions = ACTIONS && (opts[:only] || ACTIONS) - (opts[:except] || [])
-    @disallowed_actions = ACTIONS - allowed_actions
+    only = context.only || opts[:only] || ACTIONS
+    except = context.except || opts[:except] || []
+    @only = (ACTIONS && only) - except
+    @except = ACTIONS - @only
   end
 
   def collection_uri
@@ -47,12 +48,18 @@ class Syphon::Resource
       namespace: "/#{@namespace}",
       resources: @resources.map { |r| r.name },
       collections: @collections.map { |r| r.name }, 
-      only: @allowed_actions
+      only: @only
     }
   end
 
   def finalize!
     map_resource_associations!
+  end
+
+  # prettier printing
+  #
+  def instance_variables
+    super - HIDDEN_INSTANCE_VARS
   end
 
 private
