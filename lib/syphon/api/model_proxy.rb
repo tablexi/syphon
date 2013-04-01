@@ -62,6 +62,7 @@ class Syphon::Api::ModelProxy
     # FIXME: these should return full urls for other clients to consume
     #
     def link(object)
+      return unless object
       attributes = object.attributes
 
       @resources.each do |resource|

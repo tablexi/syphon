@@ -2,7 +2,10 @@ module Syphon::Api::CRUDController
   extend ActiveSupport::Concern
 
   included do
+    respond_to :json
+
     class_attribute :model_proxy  
+
     rescue_from Exception do |exception|
       render :json => { exception: exception.class.name,
                         message: exception.message, 
@@ -12,23 +15,29 @@ module Syphon::Api::CRUDController
   end
 
   def index
-    respond_with model_proxy.all(params[:conditions])
+    respond model_proxy.all(params[:conditions])
   end
 
   def create
-    respond_with model_proxy.create(params[:attributes])
+    respond model_proxy.create(params[:attributes])
   end
 
   def show
-    respond_with model_proxy.find(params[:id])
+    respond model_proxy.find(params[:id])
   end
 
   def update
-    respond_with model_proxy.update(params[:id], params[:attributes])
+    respond model_proxy.update(params[:id], params[:attributes])
   end
 
   def destroy
-    respond_with model_proxy.destroy(params[:id])
+    respond model_proxy.destroy(params[:id])
+  end
+
+private
+
+  def respond(res)
+    respond_with res, location: ''
   end
 
 end
