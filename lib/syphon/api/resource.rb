@@ -47,12 +47,9 @@ class Syphon::Api::Resource < Syphon::Resource
 private
 
   def build_controller_chain
-    model_proxy = Class.new(Syphon::Api::ModelProxy)
-    model_proxy.configure_for_resource(self)
     controller = Class.new(super_controller_klass || ActionController::Base)
     controller.send(:include, Syphon::Api::CRUDController)
-    controller.model_proxy = model_proxy
-    controller
+    controller.init(self)
   end
 
   def normalize_controller(name)

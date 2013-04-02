@@ -3,14 +3,20 @@ module Syphon::Api::CRUDController
 
   included do
     respond_to :json
-
-    class_attribute :model_proxy  
+    class_attribute :model_proxy, :instance_writer => false
 
     rescue_from Exception do |exception|
       render :json => { exception: exception.class.name,
                         message: exception.message, 
                         backtrace: exception.backtrace[0..10] }, 
              :status => 500
+    end
+  end
+
+  module ClassMethods
+    def init(resource)
+      self.model_proxy = Class.new(Syphon::Api::ModelProxy).init(resource)
+      self
     end
   end
 

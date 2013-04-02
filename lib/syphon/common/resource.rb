@@ -6,14 +6,15 @@ class Syphon::Resource
   HIDDEN_INSTANCE_VARS = [:@resource_set, :@resources, :@collections].freeze
   ACTIONS = [ :index, :show, :create, :update, :destroy].freeze
 
-  attr_reader   :name, :resource_set, :namespace, :only, :except
-  attr_accessor :fields, :resources, :collections
+  attr_reader   :name, :namespace, :only, :except
+  attr_accessor :fields, :joins, :resources, :collections
 
   def initialize(name, resource_set, context, opts = {})
     @name = name
     @resource_set = resource_set
 
     @fields = context.fields || [] 
+    @joins = context.joins || [] 
     @resources = context.resources || [] 
     @collections = context.collections || []
 
@@ -52,36 +53,25 @@ class Syphon::Resource
     }
   end
 
-  def finalize!
-    map_resource_associations!
-  end
-
   # prettier printing
   #
   def instance_variables
     super - HIDDEN_INSTANCE_VARS
   end
 
+  def find_resource(resource)
+    @resource_set[to_collection_name(resource)] || 
+    @resource_set[to_resource_name(resource)]
+  end
+
 private
 
-  def map_resource_associations!
-    map_associations!(@resources)
-    map_associations!(@collections)
-  end
-
-  def map_associations!(resources)
-    resources.map! do |resource|
-      @resource_set[to_collection_name(resource)] || 
-      @resource_set[to_resource_name(resource)]
-    end.compact!
-  end
-
   def to_resource_name(name)
-    name.to_s.singularize
+    name.to_s.singularize.to_sym
   end
 
   def to_collection_name(name)
-    name.to_s.pluralize
+    name.to_s.pluralize.to_sym
   end
 
 end

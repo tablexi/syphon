@@ -63,7 +63,7 @@ class Syphon::ResourceDSL
     ctx.resource.model = klass
   end
 
-  [:field, :resource, :collection].each do |method|
+  [:field, :join, :resource, :collection].each do |method|
     send(:define_method, method) do |*val|
       check_context_nesting(:inner)
       ctx.resource.send("#{method}s=", val)
@@ -132,7 +132,6 @@ private
     resources = {}
     resources.merge!(from_config(config, opts)) if config
     resources.merge!(from_proc(definition, opts)) if definition
-    resources.each { |n, r| r.finalize! }
     resources
   end
 
