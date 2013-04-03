@@ -8,13 +8,15 @@ class Syphon::Api::ModelProxy
       self
     end
 
+    # TODO: limit query to included columns
+    #
     def all(conditions = [])
       conditions ||= []
 
       # query conditions must come first
       conditions.sort_by! { |v| v.is_a?(Hash) ? 0 : 1 }
 
-      results = conditions.reduce(@model.select(@decorator.columns)) do |query, cond|
+      results = conditions.reduce(@model.all) do |query, cond|
         case cond
         when Hash
           cond.reduce(query) { |query, (cond, val)| query.send(cond, val) }
@@ -27,7 +29,7 @@ class Syphon::Api::ModelProxy
     end
 
     def find(id)
-      wrap @model.select(@decorator.columns).find_by_id(id)
+      wrap @model.find_by_id(id)
     end
 
     def create(attributes = {})

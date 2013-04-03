@@ -7,13 +7,12 @@ class Syphon::Resource
   ACTIONS = [ :index, :show, :create, :update, :destroy].freeze
 
   attr_reader   :name, :namespace, :only, :except
-  attr_accessor :fields, :joins, :resources, :collections
+  attr_accessor :joins, :resources, :collections
 
   def initialize(name, resource_set, context, opts = {})
     @name = name
     @resource_set = resource_set
 
-    @fields = context.fields || [] 
     @joins = context.joins || [] 
     @resources = context.resources || [] 
     @collections = context.collections || []
@@ -25,6 +24,10 @@ class Syphon::Resource
     except = context.except || opts[:except] || []
     @only = (ACTIONS && only) - except
     @except = ACTIONS - @only
+  end
+
+  def self.commands
+    [:join, :resource, :collection]
   end
 
   def collection_uri

@@ -6,8 +6,7 @@ class Syphon::Client
 
   def api(config = nil, &definition)
     @resources = Syphon::ResourceDSL[config,
-      { resource_class: Syphon::Client::Resource,
-        commands: [:namespace, :resources, :resource, :collection] },
+      { resource_class: Syphon::Client::Resource },
       &definition]
 
     add_resource_actions

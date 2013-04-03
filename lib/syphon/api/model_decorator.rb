@@ -1,38 +1,25 @@
 class Syphon::Api::ModelDecorator
   extend Forwardable
 
-  class_attribute :resource, :associations, :columns, :dynamic_fields, :foreign_keys, :instance_writer => false  
-  def_delegators :resource, :resource_name, :joins, :resources, :collections
+  class_attribute :resource, :associations, :fields, :aliases, :instance_writer => false  
+  def_delegators :resource, :fields, :renames, :resource_name, :joins, :resources, :collections
 
   class << self
 
     def init(resource)
       self.resource = resource
-      @model = resource.model_klass
-      @fields = resource.fields.map(&:to_s)
-
       self.associations = fetch_assoc_details
-      self.foreign_keys = fetch_foreign_keys
-      self.dynamic_fields = @fields - @model.column_names
-      self.columns = @fields - dynamic_fields + foreign_keys
-
       self
     end
 
   private
 
     def fetch_assoc_details
-      @model.reflect_on_all_associations.reduce({}) do |assocs, a| 
+      resource.model_klass.reflect_on_all_associations.reduce({}) do |assocs, a| 
         assocs[a.name] = { type: a.macro,
                            foreign_key: (a.options[:foreign_key] || 
                               (a.macro == :belongs_to ? "#{a.name}_id" : "#{resource.resource_name}_id")).to_s }
         assocs
-      end
-    end
-
-    def fetch_foreign_keys
-      associations.reduce([]) do |keys, (n,a)| 
-        a[:type] == :belongs_to ? keys << a[:foreign_key] : keys
       end
     end
 
@@ -49,22 +36,17 @@ class Syphon::Api::ModelDecorator
 private
 
   def to_resource_hash
-     reject_foreign_keys \
+     rename_aliased_fields \
      add_collection_links \
      add_resource_links \
      merge_nested_resources \
-     merge_dynamic_fields \
-     reject_unwanted_fields \
-      @instance.attributes
+       collect_whitelisted_fields
   end
 
-  def reject_unwanted_fields(attrs)
-    attrs.slice(*columns)
-  end
-
-  def merge_dynamic_fields(attrs)
-    dynamic_fields.reduce(attrs) do |attrs, field|
-      attrs[field] = @instance.send(field)
+  def collect_whitelisted_fields
+    fields.reduce({}) do |attrs, field|
+      attrs[field] = @instance.send(field) if 
+        @instance.respond_to?(field)
       attrs
     end
   end
@@ -93,8 +75,11 @@ private
     end
   end
 
-  def reject_foreign_keys(attrs)
-    attrs.except(*foreign_keys)
+  def rename_aliased_fields(attrs)
+    renames.reduce(attrs) do |attrs, (old, new)|
+      attrs[new] = attrs.delete(old) if attrs[old]
+      attrs
+    end
   end
 
  # resource helper

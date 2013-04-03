@@ -1,13 +1,19 @@
 class Syphon::Api::Resource < Syphon::Resource
 
-  attr_accessor :model, :controller
+  attr_accessor :renames, :fields, :model, :controller
   attr_reader   :super_controller
 
   def initialize(name, resource_set, context, opts = {})
     super
     @model = name
     @controller = name
+    @fields = context.fields || [] 
+    @renames = context.renames || [] 
     @super_controller = context.super_controller # can be nil
+  end
+
+  def self.commands
+    [:field, :rename] + super
   end
 
   def build_controller!

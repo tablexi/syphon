@@ -23,9 +23,8 @@ class Syphon::ResourceDSL
   alias_method :ctx, :context
 
   def initialize(opts = {})
-    @valid_commands = opts[:commands]
     @resource_class = opts[:resource_class] || Syphon::Api::Resource 
-    expose_valid_commands
+    expose_resource_commands
 
     @resources = HashWithIndifferentAccess.new
     @context = Context.new(:root, nil)
@@ -63,24 +62,14 @@ class Syphon::ResourceDSL
     ctx.resource.model = klass
   end
 
-  [:field, :join, :resource, :collection].each do |method|
-    send(:define_method, method) do |*val|
-      check_context_nesting(:inner)
-      ctx.resource.send("#{method}s=", val)
-    end
-  end
-
 private
 
-  # hide all unsupported DSL commands
-  #
-  def expose_valid_commands
-    return unless @valid_commands
-    private_commands = \
-      public_methods(false) - @valid_commands
-    private_commands.each do |command|
-      singleton_class.class_eval do
-        private(command)
+  def expose_resource_commands
+    @resource_class.commands.each do |method|
+      define_singleton_method(method) do |*val|
+        val = val.first if val.first.is_a?(Hash)
+        check_context_nesting(:inner)
+        ctx.resource.send("#{method}s=", val)
       end
     end
   end
