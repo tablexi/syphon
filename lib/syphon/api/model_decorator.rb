@@ -24,7 +24,8 @@ class Syphon::Api::ModelDecorator
     def fetch_assoc_details
       @model.reflect_on_all_associations.reduce({}) do |assocs, a| 
         assocs[a.name] = { type: a.macro,
-                           foreign_key: (a.options[:foreign_key] || "#{a.name}_id").to_s }
+                           foreign_key: (a.options[:foreign_key] || 
+                              (a.macro == :belongs_to ? "#{a.name}_id" : "#{resource.resource_name}_id")).to_s }
         assocs
       end
     end
@@ -54,7 +55,7 @@ private
      merge_nested_resources \
      merge_dynamic_fields \
      reject_unwanted_fields \
-     @instance.attributes
+      @instance.attributes
   end
 
   def reject_unwanted_fields(attrs)
@@ -68,53 +69,27 @@ private
     end
   end
 
-  #FIXME: refactor
   def merge_nested_resources(attrs)
-    joins.reduce(attrs) do |attrs, name|
-      my_resource = resource.find_resource(name)
-      # check if controller was built by Syphon
-      #
-      attrs[name] = \
-        if my_resource.controller_klass.respond_to?(:model_proxy)
-          val = @instance.send(name)
-          model_proxy = my_resource.controller_klass.model_proxy
-          if val.is_a? Array
-            val.map { |v| model_proxy.wrap(v) }
-          else model_proxy.wrap(val)
-          end
-        else 
-          @instance.send(name)
-        end
-      attrs
+    add_resource_fields(joins, attrs) do |resource, assoc|
+      if resource.controller_klass.respond_to?(:model_proxy)
+        proxy = resource.controller_klass.model_proxy
+        assoc.is_a?(Array) ? assoc.map { |a| proxy.wrap(a) } : proxy.wrap(assoc)
+      else assoc
+      end
     end
   end
 
   def add_resource_links(attrs)
-    resources.reduce(attrs) do |attrs, name|
-      my_resource = resource.find_resource(name)
-      name = my_resource.resource_name
-      attrs[name] = \
-        if (relation = @instance.send(name))
-          my_resource.resource_uri(relation.send(relation.class.primary_key))
-        else nil
-        end
-      attrs
+    add_resource_fields(resources, attrs) do |resource, assoc|
+      resource.resource_uri assoc.send(assoc.class.primary_key)
     end
   end
 
   def add_collection_links(attrs)
-    collections.reduce(attrs) do |attrs, name|
-      my_resource = resource.find_resource(name)
-      name = my_resource.collection_name
-      attrs[name] = \
-        if (relation = @instance.send(name).any?)
-          binding.pry
-          fkey = associations[name][:foreign_key]
-          pkey = (fkey == "#{my_resource.resource_name}_id" ? :id : fkey)
-          "#{my_resource.collection_uri}?#{resource_query(fkey, @instance.send(pkey))}"
-        else []
-        end
-      attrs
+    add_resource_fields(collections, attrs) do |resource, assoc|
+      assoc_fkey = associations[resource.collection_name][:foreign_key]
+      assoc_pkey = @instance.class.primary_key
+      resource.query_uri(assoc_fkey, @instance.send(assoc_pkey))
     end
   end
 
@@ -122,8 +97,19 @@ private
     attrs.except(*foreign_keys)
   end
 
-  def resource_query(fkey, id)
-    {where: { fkey => id }}.to_query
+ # resource helper
+
+  def add_resource_fields(associations, attrs)
+    associations.reduce(attrs) do |attrs, name|
+      if !@instance.respond_to?(name)
+        attrs
+      elsif (assoc = @instance.send(name)) && 
+            (assoc_resource = resource[name])
+        attrs[name] = yield(assoc_resource, assoc)
+        attrs
+      else attrs.merge(name => nil)
+      end
+    end
   end
 
 end

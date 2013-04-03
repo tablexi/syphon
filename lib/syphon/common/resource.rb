@@ -35,6 +35,10 @@ class Syphon::Resource
     "#{@uri}/#{id}"
   end
 
+  def query_uri(fkey, id)
+    "#{self.collection_uri}?#{resource_query(fkey, id)}"
+  end
+
   def resource_name
     @resource_name ||= to_resource_name(@name)
   end
@@ -59,9 +63,13 @@ class Syphon::Resource
     super - HIDDEN_INSTANCE_VARS
   end
 
-  def find_resource(resource)
-    @resource_set[to_collection_name(resource)] || 
-    @resource_set[to_resource_name(resource)]
+  def [](resource)
+    if resource.is_a? Class
+      @resource_set.detect { |r| r.model_klass == resource }
+    else
+      @resource_set[to_collection_name(resource)] || 
+      @resource_set[to_resource_name(resource)]
+    end
   end
 
 private
@@ -72,6 +80,10 @@ private
 
   def to_collection_name(name)
     name.to_s.pluralize.to_sym
+  end
+
+  def resource_query(fkey, id)
+    {where: { fkey => id }}.to_query
   end
 
 end
