@@ -1,34 +1,38 @@
 class Syphon::Api::Resource < Syphon::Resource
 
-  attr_accessor :renames, :fields, :model, :controller
+  COMMANDS = [:primary_key, :model, :controller, :routes, :fields, :renames].freeze
+  SPLAT = [:fields].freeze
+
+  attr_accessor *COMMANDS
   attr_reader   :super_controller
 
   def initialize(name, resource_set, context, opts = {})
     super
+    @hidden = opts[:hidden]
+    @primary_key = :id
     @model = name
     @controller = name
-    @fields = context.fields || [] 
-    @renames = context.renames || [] 
+    @routes = {}
+    @fields = [] 
+    @renames = [] 
     @super_controller = context.super_controller # can be nil
   end
 
   def self.commands
-    [:field, :rename] + super
+    commands = COMMANDS.inject({}) do |h,c| 
+      h[c] = { splat: SPLAT.include?(c) }; h 
+    end
+
+    super.merge(commands)
   end
 
   def build_controller!
-    return if controller_klass
-    const_namespace.const_set(controller_name, build_controller_chain)
+    build_controller_chain
   end
 
-  def draw_route!(application)
-    # need the resource in the routes scope
-    resource = self
-    application.routes.draw do
-      nested_namespace(resource.namespace.split('/')) do
-        resources resource.name, :controller => resource.controller, 
-                                 :only => resource.only
-      end
+  def draw_routes!(app)
+    unless @hidden
+      @routes.empty? ? draw_resourceful_routes(app) : draw_custom_routes(app)
     end
   end
 
@@ -53,9 +57,38 @@ class Syphon::Api::Resource < Syphon::Resource
 private
 
   def build_controller_chain
-    controller = Class.new(super_controller_klass || ActionController::Base)
+    controller = controller_klass || 
+      Class.new(super_controller_klass || ActionController::Base)
+
     controller.send(:include, Syphon::Api::CRUDController)
     controller.init(self)
+
+    const_namespace.const_set(controller_name, controller) unless controller.name
+  end
+
+  def draw_resourceful_routes(app)
+    resource = self
+    app.routes.draw do
+      nested_namespace(resource.namespace.split('/')) do
+        resources resource.name, :controller => resource.controller, 
+                                 :only => resource.only
+      end
+    end
+  end
+
+  def draw_custom_routes(app)
+    resource = self
+    routes = @routes
+    controller = @controller
+    app.routes.draw do
+      nested_namespace(resource.namespace.split('/')) do
+        routes.each do |action, route|
+          requests, route = route if route.is_a?(Array)
+          match route => "#{controller}##{action}", 
+            :via => requests || [:get]
+        end
+      end
+    end
   end
 
   def normalize_controller(name)

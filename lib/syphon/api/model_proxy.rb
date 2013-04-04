@@ -4,6 +4,7 @@ class Syphon::Api::ModelProxy
 
     def init(resource)
       @model = resource.model_klass
+      @pkey  = resource.primary_key
       @decorator = Class.new(Syphon::Api::ModelDecorator).init(resource)
       self
     end
@@ -29,24 +30,30 @@ class Syphon::Api::ModelProxy
     end
 
     def find(id)
-      wrap @model.find_by_id(id)
+      wrap find_by_pkey(id)
     end
 
     def create(attributes = {})
       obj = @model.create(attributes)
-      obj.valid? ? find(obj.id) : obj
+      obj.valid? ? find(obj.send(@pkey)) : obj
     end
 
     def update(id, attributes = {})
-      @model.update(id, attributes)
+      find_by_pkey(id).update_attributes(attributes)
     end
 
     def destroy(id)
-      @model.destroy(id)
+      find_by_pkey(id).destroy
     end
 
     def wrap(object)
       object && @decorator.new(object).to_h
+    end
+
+  private
+
+    def find_by_pkey(id)
+      @model.send("find_by_#{@pkey}", id)
     end
 
   end

@@ -3,19 +3,20 @@ require 'active_support/core_ext/string/inflections'
 
 class Syphon::Resource
 
-  HIDDEN_INSTANCE_VARS = [:@resource_set, :@resources, :@collections].freeze
+  HIDDEN_INSTANCE_VARS = [:@resource_set].freeze
   ACTIONS = [ :index, :show, :create, :update, :destroy].freeze
+  COMMANDS = [:joins, :resources, :collections].freeze
 
   attr_reader   :name, :namespace, :only, :except
-  attr_accessor :joins, :resources, :collections
+  attr_accessor *COMMANDS
 
   def initialize(name, resource_set, context, opts = {})
     @name = name
     @resource_set = resource_set
 
-    @joins = context.joins || [] 
-    @resources = context.resources || [] 
-    @collections = context.collections || []
+    @joins = [] 
+    @resources = [] 
+    @collections = []
 
     @namespace = context.namespace[1..-1] # remove leading slash
     @uri = "/#{@namespace}/#{@name}"
@@ -27,7 +28,7 @@ class Syphon::Resource
   end
 
   def self.commands
-    [:join, :resource, :collection]
+    COMMANDS.inject({}) { |h,c| h[c] = { splat: true }; h }
   end
 
   def collection_uri
@@ -54,8 +55,8 @@ class Syphon::Resource
     {
       name: @name,
       namespace: "/#{@namespace}",
-      resources: @resources.map { |r| r.name },
-      collections: @collections.map { |r| r.name }, 
+      resources: @resources,
+      collections: @collections, 
       only: @only
     }
   end

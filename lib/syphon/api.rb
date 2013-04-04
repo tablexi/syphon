@@ -23,7 +23,7 @@ class Syphon::Api
     def draw_routes!(application)
       @resources.each do |name, resource|
         resource.build_controller!
-        resource.draw_route!(application)
+        resource.draw_routes!(application)
       end
     end
 

@@ -15,7 +15,9 @@ class Syphon::Api::ModelDecorator
   private
 
     def fetch_assoc_details
-      resource.model_klass.reflect_on_all_associations.reduce({}) do |assocs, a| 
+      model = resource.model_klass
+      return {} unless model && model.ancestors.include?(ActiveRecord::Base)
+      model.reflect_on_all_associations.reduce({}) do |assocs, a| 
         assocs[a.name] = { type: a.macro,
                            foreign_key: (a.options[:foreign_key] || 
                               (a.macro == :belongs_to ? "#{a.name}_id" : "#{resource.resource_name}_id")).to_s }
@@ -36,6 +38,7 @@ class Syphon::Api::ModelDecorator
 private
 
   def to_resource_hash
+     stringify_large_vals \
      rename_aliased_fields \
      add_collection_links \
      add_resource_links \
@@ -79,6 +82,16 @@ private
     renames.reduce(attrs) do |attrs, (old, new)|
       attrs[new] = attrs.delete(old) if attrs[old]
       attrs
+    end
+  end
+
+  # JS ends up rounding integers that are larger than can be represented by the
+  # IEEE spec, so send long keys over ast strings
+  #
+  def stringify_large_vals(attrs)
+    attrs.each do |k,v|
+      attrs[k] = v.to_s if 
+        v.is_a?(Numeric) && v > 10000000000
     end
   end
 

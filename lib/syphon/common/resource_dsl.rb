@@ -1,13 +1,15 @@
 require 'ostruct'
+require 'active_support/core_ext/string'
 require 'active_support/hash_with_indifferent_access'
 
 class Syphon::ResourceDSL
 
   class Context < OpenStruct
-    def initialize(type, parent)
+    def initialize(type, parent = nil)
       super()
       self.type  = type
       self.parent = parent
+      self.namespace = '' if type == :root
     end
 
     # emulate lexical scoping
@@ -24,12 +26,11 @@ class Syphon::ResourceDSL
 
   def initialize(opts = {})
     @resource_class = opts[:resource_class] || Syphon::Api::Resource 
-    expose_resource_commands
+    add_resource_commands
 
     @resources = HashWithIndifferentAccess.new
-    @context = Context.new(:root, nil)
-    @context.namespace = ''
     @context_stack = []
+    @context = Context.new(:root)
   end
 
   def namespace(name, &block)
@@ -38,38 +39,26 @@ class Syphon::ResourceDSL
     end
   end
 
-  def resources(name, opts = {}, &block)
+  def resource(name, opts = {}, &block)
     new_context :resources, block do
       ctx.resource = @resource_class.new(name, @resources, ctx, opts)
       @resources[name] = ctx.resource
     end
   end
 
-  # Not wrapped in context block since controller command can be called anywhere
-  # legally
-  #
-  def controller(klass)
-    case ctx.type
-    when :root, :namespace
-      ctx.super_controller = klass
-    when :resources
-      ctx.resource.controller = klass
-    end
-  end
-
-  def model(klass)
-    check_context_nesting(:inner)
-    ctx.resource.model = klass
+  def super_controller(klass)
+    check_context_nesting(:super_controller)
+    ctx.super_controller = klass
   end
 
 private
 
-  def expose_resource_commands
-    @resource_class.commands.each do |method|
-      define_singleton_method(method) do |*val|
-        val = val.first if val.first.is_a?(Hash)
+  def add_resource_commands
+    @resource_class.commands.each do |cmd, opts|
+      define_singleton_method(cmd) do |*val|
+        val = val.first unless opts[:splat]
         check_context_nesting(:inner)
-        ctx.resource.send("#{method}s=", val)
+        ctx.resource.send("#{cmd}=", val)
       end
     end
   end
@@ -80,7 +69,7 @@ private
     create_new_context(type)
 
     # run context initializer
-    yield
+    yield if block_given?
 
     # execute user provided block within context
     self.instance_eval(&proc) if proc
@@ -102,6 +91,8 @@ private
   def check_context_nesting(new_context_type)
     error = \
       case new_context_type
+      when :super_controller
+        ctx.type != :root && ctx.type != :namespace
       when :namespace
         ctx.type != :root && ctx.type != :namespace
       when :resources
