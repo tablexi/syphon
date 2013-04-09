@@ -1,3 +1,5 @@
+require 'active_support/core_ext/class/attribute'
+
 class Syphon::Api::ModelDecorator
   extend Forwardable
 

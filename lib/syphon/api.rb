@@ -15,9 +15,9 @@ class Syphon::Api
     attr_accessor :resources
 
     def api(config = nil, &definition)
-      @resources = Syphon::ResourceDSL[config, 
+      @resources = Syphon::ResourceDSL.parse(config, 
         { resource_class: Syphon::Api::Resource }, 
-        &definition]
+        &definition)
     end
 
     def draw_routes!(application)

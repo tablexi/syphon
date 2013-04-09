@@ -1,3 +1,6 @@
+require 'active_support/core_ext/class/attribute'
+require 'active_support/concern'
+
 module Syphon::Api::CRUDController
   extend ActiveSupport::Concern
 

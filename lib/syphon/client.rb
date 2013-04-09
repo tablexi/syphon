@@ -5,9 +5,9 @@ class Syphon::Client
   autoload :Resource, 'syphon/client/resource'
 
   def api(config = nil, &definition)
-    @resources = Syphon::ResourceDSL[config,
+    @resources = Syphon::ResourceDSL.parse(config,
       { resource_class: Syphon::Client::Resource },
-      &definition]
+      &definition)
 
     add_resource_actions
   end

@@ -1,5 +1,4 @@
 require 'ostruct'
-require 'active_support/core_ext/string'
 require 'active_support/hash_with_indifferent_access'
 
 class Syphon::ResourceDSL
@@ -108,7 +107,7 @@ private
 
   # init helper
   #
-  def self.[](config, opts = {}, &definition)
+  def self.parse(config, opts = {}, &definition)
     resources = {}
     resources.merge!(from_config(config, opts)) if config
     resources.merge!(from_proc(definition, opts)) if definition
