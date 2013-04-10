@@ -1,6 +1,3 @@
-require 'syphon/common/resource'
-require 'syphon/common/resource_dsl'
-
 class Syphon::Client
   autoload :Resource, 'syphon/client/resource'
 

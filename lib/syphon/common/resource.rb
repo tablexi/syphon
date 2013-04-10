@@ -1,7 +1,5 @@
-require 'active_support'
-require 'active_support/core_ext/string/inflections'
-
 class Syphon::Resource
+  include Syphon::Inflections
 
   HIDDEN_INSTANCE_VARS = [:@resource_set].freeze
   ACTIONS = [ :index, :show, :create, :update, :destroy].freeze
@@ -14,12 +12,13 @@ class Syphon::Resource
     @name = name
     @resource_set = resource_set
 
-    @joins = [] 
-    @resources = [] 
-    @collections = []
+    @joins = context.joins || [] 
+    @resources = context.resources || [] 
+    @collections = context.collections || []
 
-    @namespace = context.namespace[1..-1] # remove leading slash
-    @uri = "/#{@namespace}/#{@name}"
+    @namespace = context.namespace
+    @namespace = @namespace[1..-1] if @namespace[0] == ?/
+    @uri = @namespace.empty? ? "/#{@name}" : "/#{@namespace}/#{@name}"
 
     only = context.only || opts[:only] || ACTIONS
     except = context.except || opts[:except] || []
@@ -44,11 +43,11 @@ class Syphon::Resource
   end
 
   def resource_name
-    @resource_name ||= to_resource_name(@name)
+    @resource_name ||= singularize(@name).to_sym
   end
 
   def collection_name
-    @collection_name ||= to_collection_name(@name)
+    @collection_name ||= pluralize(@name).to_sym
   end
 
   def serialize
@@ -67,27 +66,10 @@ class Syphon::Resource
     super - HIDDEN_INSTANCE_VARS
   end
 
-  def [](resource)
-    if resource.is_a? Class
-      @resource_set.detect { |r| r.model_klass == resource }
-    else
-      @resource_set[to_collection_name(resource)] || 
-      @resource_set[to_resource_name(resource)]
-    end
-  end
-
 private
 
-  def to_resource_name(name)
-    name.to_s.singularize.to_sym
-  end
-
-  def to_collection_name(name)
-    name.to_s.pluralize.to_sym
-  end
-
   def resource_query(fkey, id)
-    {where: { fkey => id }}.to_query
+   {where: { fkey => id }}.to_query
   end
 
 end

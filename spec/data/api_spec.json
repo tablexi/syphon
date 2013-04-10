@@ -1,7 +1,7 @@
 [
   {
      "name":"sessions",
-     "namespace":"/api",
+     "namespace":"api",
      "resources":[],
      "collections":[],
      "only":[ 
@@ -10,7 +10,7 @@
   },
   {
      "name":"plans",
-     "namespace":"/api",
+     "namespace":"api",
      "resources":[],
      "collections":[
         "subscriptions"
@@ -25,7 +25,7 @@
   },
   {
      "name":"subscriptions",
-     "namespace":"/api",
+     "namespace":"api",
      "resources":[
         "subscription_plan",
         "account"
@@ -41,7 +41,7 @@
   },
   {
      "name":"accounts",
-     "namespace":"/api",
+     "namespace":"api",
      "resources":[],
      "collections":[],
      "only":[

@@ -1,9 +1,8 @@
-require 'syphon/common/resource'
-require 'syphon/common/resource_dsl'
 require 'syphon/core_ext/action_dispatch'
 
 class Syphon::Api
   autoload :Resource,       'syphon/api/resource'
+  autoload :RailsConfig,    'syphon/api/rails_config'
   autoload :ModelProxy,     'syphon/api/model_proxy'
   autoload :ModelDecorator, 'syphon/api/model_decorator'
   autoload :CRUDController, 'syphon/api/crud_controller'
@@ -22,8 +21,7 @@ class Syphon::Api
 
     def draw_routes!(application)
       @resources.each do |name, resource|
-        resource.build_controller!
-        resource.draw_routes!(application)
+        RailsConfig.add_resource(application, resource)
       end
     end
 

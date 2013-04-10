@@ -17,7 +17,7 @@ class Syphon::Api::ModelDecorator
   private
 
     def fetch_assoc_details
-      model = resource.model_klass
+      model = resource.model_class
       return {} unless model && model.ancestors.include?(ActiveRecord::Base)
       model.reflect_on_all_associations.reduce({}) do |assocs, a| 
         assocs[a.name] = { type: a.macro,
@@ -58,8 +58,8 @@ private
 
   def merge_nested_resources(attrs)
     add_resource_fields(joins, attrs) do |resource, assoc|
-      if resource.controller_klass.respond_to?(:model_proxy)
-        proxy = resource.controller_klass.model_proxy
+      if resource.controller_class.respond_to?(:model_proxy)
+        proxy = resource.controller_class.model_proxy
         assoc.is_a?(Array) ? assoc.map { |a| proxy.wrap(a) } : proxy.wrap(assoc)
       else assoc
       end

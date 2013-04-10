@@ -3,7 +3,7 @@ class Syphon::Api::ModelProxy
   class << self
 
     def init(resource)
-      @model = resource.model_klass
+      @model = resource.model_class
       @pkey  = resource.primary_key
       @decorator = Class.new(Syphon::Api::ModelDecorator).init(resource)
       self
