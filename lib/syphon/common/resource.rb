@@ -5,8 +5,8 @@ class Syphon::Resource
   ACTIONS = [ :index, :show, :create, :update, :destroy].freeze
   COMMANDS = [:joins, :resources, :collections].freeze
 
-  attr_reader   :name, :namespace, :only, :except
-  attr_accessor *COMMANDS
+  attr_reader   :name, :namespace, :only, :except, :resource_set
+  attr_accessor *COMMANDS, :decorator_class
 
   def initialize(name, resource_set, context, opts = {})
     @name = name

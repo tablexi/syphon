@@ -8,10 +8,19 @@ class Syphon::Api::ModelDecorator
 
   class << self
 
+    def new_class(*args)
+      Class.new(self).init(*args)
+    end
+
     def init(resource)
+      resource.decorator_class = self
       self.resource = resource
       self.associations = fetch_assoc_details
       self
+    end
+
+    def wrap(instance)
+      self.new(instance).to_h
     end
 
   private
@@ -19,6 +28,7 @@ class Syphon::Api::ModelDecorator
     def fetch_assoc_details
       model = resource.model_class
       return {} unless model && model.ancestors.include?(ActiveRecord::Base)
+
       model.reflect_on_all_associations.reduce({}) do |assocs, a| 
         assocs[a.name] = { type: a.macro,
                            foreign_key: (a.options[:foreign_key] || 
@@ -42,8 +52,8 @@ private
   def to_resource_hash
      stringify_large_vals \
      rename_aliased_fields \
-     add_collection_links \
-     add_resource_links \
+     link_collections \
+     link_resources \
      merge_nested_resources \
        collect_whitelisted_fields
   end
@@ -58,25 +68,26 @@ private
 
   def merge_nested_resources(attrs)
     add_resource_fields(joins, attrs) do |resource, assoc|
-      if resource.controller_class.respond_to?(:model_proxy)
-        proxy = resource.controller_class.model_proxy
-        assoc.is_a?(Array) ? assoc.map { |a| proxy.wrap(a) } : proxy.wrap(assoc)
+      if (decorator = resource.decorator_class)
+        assoc.is_a?(Array) ? 
+          assoc.map { |a| decorator.wrap(a) } : 
+          decorator.wrap(assoc)
       else assoc
       end
     end
   end
 
-  def add_resource_links(attrs)
+  def link_resources(attrs)
     add_resource_fields(resources, attrs) do |resource, assoc|
-      resource.resource_uri assoc.send(assoc.class.primary_key)
+      resource.resource_uri assoc.send(resource.primary_key)
     end
   end
 
-  def add_collection_links(attrs)
+  def link_collections(attrs)
     add_resource_fields(collections, attrs) do |resource, assoc|
-      assoc_fkey = associations[resource.collection_name][:foreign_key]
-      assoc_pkey = @instance.class.primary_key
-      resource.query_uri(assoc_fkey, @instance.send(assoc_pkey))
+      assocs = associations[resource.collection_name]
+      fkey = (assocs && assocs[:foreign_key]) || klass.resource.foreign_key
+      resource.query_uri(fkey, @instance.send(klass.resource.primary_key))
     end
   end
 
@@ -104,12 +115,18 @@ private
       if !@instance.respond_to?(name)
         attrs
       elsif (assoc = @instance.send(name)) && 
-            (assoc_resource = resource[name])
+            (assoc_resource = resource.resource_set.find(name))
         attrs[name] = yield(assoc_resource, assoc)
         attrs
       else attrs.merge(name => nil)
       end
     end
+  end
+
+private
+
+  def klass
+    self.class
   end
 
 end

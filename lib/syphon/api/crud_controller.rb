@@ -18,7 +18,7 @@ module Syphon::Api::CRUDController
 
   module ClassMethods
     def init(resource)
-      self.model_proxy = Class.new(Syphon::Api::ModelProxy).init(resource)
+      self.model_proxy = Syphon::Api::ModelProxy.new_class(resource)
       self
     end
   end
@@ -47,6 +47,10 @@ private
 
   def respond(res)
     respond_with res, location: ''
+  end
+
+  def decorate(obj)
+    model_proxy.wrap(obj)
   end
 
 end

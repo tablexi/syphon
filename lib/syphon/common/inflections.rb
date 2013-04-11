@@ -9,7 +9,7 @@ module Syphon::Inflections
   #
   def constantize(name)
     const = name.to_s.safe_constantize
-    const.to_s == name ? const : nil
+    const.to_s.gsub('::','') == name.gsub('::','') ? const : nil
   end
 
   def classify(name)

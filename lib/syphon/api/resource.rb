@@ -1,7 +1,7 @@
 class Syphon::Api::Resource < Syphon::Resource
   include Syphon::Inflections
 
-  COMMANDS = [:primary_key, :model, :controller, :routes, :fields, :renames].freeze
+  COMMANDS = [:primary_key, :foreign_key, :model, :controller, :routes, :fields, :renames].freeze
   SPLAT = [:fields].freeze
 
   attr_accessor *COMMANDS
@@ -11,6 +11,7 @@ class Syphon::Api::Resource < Syphon::Resource
     super
     @hidden = opts[:hidden]
     @primary_key = :id
+    @foreign_key = "#{resource_name}_id".to_sym
     @model = name
     @controller = name
     @routes = {}
@@ -34,7 +35,7 @@ class Syphon::Api::Resource < Syphon::Resource
     if mod
       return mod
     else
-      modules = module_name.split('::').reverse
+      modules = module_name.split('::')
       modules.reduce(Object) do |mod, name|
         mod.const_set(name, Module.new)
       end

@@ -1,5 +1,5 @@
 class Syphon::Api::RailsConfig
-  include Syphon::Inflections
+  extend Syphon::Inflections
 
   private_class_method :new
 
@@ -13,9 +13,9 @@ class Syphon::Api::RailsConfig
 
       unless @resource.hidden
         if @resource.routes.empty? 
-          draw_resourceful_routes(app)
+          draw_resourceful_routes(@app)
         else
-          draw_custom_routes(app)
+          draw_custom_routes(@app)
         end
       end
     end
@@ -36,7 +36,7 @@ class Syphon::Api::RailsConfig
       #
       unless controller.name
         @resource.namespace_module.const_set(
-          controllerize @resource.controller, 
+          controllerize(@resource.controller), 
           controller)
       end
     end

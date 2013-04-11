@@ -14,13 +14,13 @@ class Syphon::Api
     attr_accessor :resources
 
     def api(config = nil, &definition)
-      @resources = Syphon::ResourceDSL.parse(config, 
+      @resource_set = Syphon::ResourceDSL.parse(config, 
         { resource_class: Syphon::Api::Resource }, 
         &definition)
     end
 
     def draw_routes!(application)
-      @resources.each do |name, resource|
+      @resource_set.each do |name, resource|
         RailsConfig.add_resource(application, resource)
       end
     end
@@ -28,14 +28,10 @@ class Syphon::Api
     # Pretend we're a Rack app so rails can route to us.
     #
     def draw_discovery_route!(application, path)
-      api = self
+      resource_set = @resource_set
       application.routes.draw do
-        match path => proc { |env| [200, {"Content-TYpe" => 'application/json'}, [api.resource_map.to_json]] }
+        match path => proc { |env| [200, {"Content-TYpe" => 'application/json'}, [resource_set.to_json]] }
       end
-    end
-
-    def resource_map
-      @resource_map ||= @resources.map { |n, r| r.serialize }
     end
 
   end

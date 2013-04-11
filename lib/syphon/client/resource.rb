@@ -21,7 +21,7 @@ class Syphon::Client::Resource < Syphon::Resource
     super
     @actions = []
     @response_wrapper = \
-      self.class.const_set(resource_name.classify, Class.new(ResponseWrapper))
+      self.class.const_set(resource_name.to_s.classify, Class.new(ResponseWrapper))
 
     expose_allowed_actions
   end
@@ -102,6 +102,7 @@ protected
     finders = []
 
     @resources.each do |resource|
+      resource = resource_set.find(resource)
       name = resource.resource_name
       relation_uri = response[name]
 
@@ -114,6 +115,7 @@ protected
     end
 
     @collections.each do |resource|
+      resource = resource_set.find(resource)
       name = resource.collection_name
       query = response[name]
 

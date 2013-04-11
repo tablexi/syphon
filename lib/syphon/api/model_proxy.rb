@@ -2,10 +2,14 @@ class Syphon::Api::ModelProxy
 
   class << self
 
+    def new_class(*args)
+      Class.new(self).init(*args)
+    end
+
     def init(resource)
       @model = resource.model_class
       @pkey  = resource.primary_key
-      @decorator = Class.new(Syphon::Api::ModelDecorator).init(resource)
+      @decorator = Syphon::Api::ModelDecorator.new_class(resource)
       self
     end
 
@@ -47,7 +51,7 @@ class Syphon::Api::ModelProxy
     end
 
     def wrap(object)
-      object && @decorator.new(object).to_h
+      object && @decorator.wrap(object)
     end
 
   private
