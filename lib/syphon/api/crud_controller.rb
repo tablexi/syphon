@@ -27,12 +27,12 @@ module Syphon::Api::CRUDController
     respond model_proxy.all(params[:conditions])
   end
 
-  def create
-    respond model_proxy.create(params[:attributes])
-  end
-
   def show
     respond model_proxy.find(params[:id])
+  end
+
+  def create
+    respond model_proxy.create(params[:attributes])
   end
 
   def update

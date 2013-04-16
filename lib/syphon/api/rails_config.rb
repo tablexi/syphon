@@ -55,13 +55,13 @@ class Syphon::Api::RailsConfig
     def draw_custom_routes(app)
       resource = @resource
       routes = @resource.routes
-      controller = @controller
+      controller = @resource.controller
 
       @app.routes.draw do
         nested_namespace(resource.namespace.split('/')) do
           routes.each do |action, route|
-            requests, route = route if route.is_a?(Array)
-            match route => "#{controller}##{action}", :via => requests || [:get]
+            route, opts = route if route.is_a?(Array)
+            match( { route => "#{controller}##{action}" }.merge(opts || {}) )
           end
         end
       end
