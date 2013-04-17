@@ -45,11 +45,15 @@ class Syphon::Api::ModelProxy
     end
 
     def update(id, attributes = {})
-      find_by_pkey(id).update_attributes(attributes)
+      obj = find_by_pkey(id)
+      obj.update_attributes(attributes)
+      obj
     end
 
     def destroy(id)
-      find_by_pkey(id).destroy
+      obj = find_by_pkey(id)
+      obj.destroy
+      obj
     end
 
     def wrap(object)
