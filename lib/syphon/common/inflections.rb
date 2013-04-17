@@ -3,13 +3,29 @@ require 'active_support/core_ext/object'
 
 module Syphon::Inflections
 
-  # Fixes stupid safe_constantize behavior where
-  # "NS1::NS2::SomeClass".safe_constantize returns 
-  # ::SomeClass if it exists
+  # ActiveSupport safe_constantize forgets to check if const_missing magically
+  # loaded a module with the same name but at a lower nesting level.
   #
-  def constantize(name)
-    const = name.to_s.safe_constantize
-    const.to_s.gsub('::','') == name.gsub('::','') ? const : nil
+  def constantize(camel_cased_word)
+    begin
+      names = camel_cased_word.to_s.split('::')
+      names.shift if names.empty? || names.first.empty?
+
+      constant = Object
+      names.each do |name|
+        new_constant = constant.const_defined?(name, false) ? constant.const_get(name) : constant.const_missing(name)
+        if constant != Object && new_constant.to_s == name
+          constant = nil
+          break
+        else constant = new_constant
+        end
+      end
+      constant
+    rescue NameError => e
+      raise unless e.message =~ /(uninitialized constant|wrong constant name)/ || e.name.to_s == camel_cased_word.to_s
+    rescue ArgumentError => e
+      raise unless e.message =~ /not missing constant/
+    end
   end
 
   def classify(name)

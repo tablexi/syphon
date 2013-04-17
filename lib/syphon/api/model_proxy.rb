@@ -2,6 +2,8 @@ class Syphon::Api::ModelProxy
 
   class << self
 
+    attr_reader :model
+
     def new_class(*args)
       Class.new(self).init(*args)
     end
@@ -52,6 +54,15 @@ class Syphon::Api::ModelProxy
 
     def wrap(object)
       object && @decorator.wrap(object)
+    end
+
+    #TODO: why is this class a singleton? refactor it to a regular class and
+    # use new here
+    #
+    def with_model(model)
+      new_proxy = self.clone
+      new_proxy.instance_variable_set('@model', model)
+      new_proxy
     end
 
   private

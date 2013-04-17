@@ -11,7 +11,7 @@ class Syphon::Api
 
   class << self
 
-    attr_accessor :resources
+    attr_accessor :resource_set
 
     def api(config = nil, &definition)
       @resource_set = Syphon::ResourceDSL.parse(config, 

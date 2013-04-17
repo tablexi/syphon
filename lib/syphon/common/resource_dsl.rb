@@ -70,17 +70,22 @@ class Syphon::ResourceDSL
       end
     end
 
-    def super_controller(klass)
+    def super_controller(ctrl)
       check_context_nesting(:super_controller)
-      ctx.super_controller = klass
+      ctx.super_controller = "#{ctx.namespace}/#{ctrl}"
     end
 
   private
 
     def add_resource_commands
       @resource_class.commands.each do |cmd, opts|
-        define_singleton_method(cmd) do |*val|
-          val = val.first unless opts[:splat]
+        define_singleton_method(cmd) do |*val, &blk|
+          if blk
+            val = blk
+          elsif !opts[:splat]
+            val = val.first 
+          end
+
           check_context_nesting(:inner)
           ctx.resource.send("#{cmd}=", val)
         end

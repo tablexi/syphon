@@ -6,7 +6,7 @@ module Syphon::Api::CRUDController
 
   included do
     respond_to :json
-    class_attribute :model_proxy, :instance_writer => false
+    class_attribute :model_proxy, :model_scope, :instance_writer => false
 
     rescue_from Exception do |exception|
       render :json => { exception: exception.class.name,
@@ -19,28 +19,29 @@ module Syphon::Api::CRUDController
   module ClassMethods
     def init(resource)
       self.model_proxy = Syphon::Api::ModelProxy.new_class(resource)
+      self.model_scope = resource.scope
       self
     end
   end
 
   def index
-    respond model_proxy.all(params[:conditions])
+    respond scoped_proxy.all(params[:conditions])
   end
 
   def show
-    respond model_proxy.find(params[:id])
+    respond scoped_proxy.find(params[:id])
   end
 
   def create
-    respond model_proxy.create(params[:attributes])
+    respond scoped_proxy.create(params[:attributes])
   end
 
   def update
-    respond model_proxy.update(params[:id], params[:attributes])
+    respond scoped_proxy.update(params[:id], params[:attributes])
   end
 
   def destroy
-    respond model_proxy.destroy(params[:id])
+    respond scoped_proxy.destroy(params[:id])
   end
 
 private
@@ -51,6 +52,14 @@ private
 
   def decorate(obj)
     model_proxy.wrap(obj)
+  end
+
+  def scoped_proxy
+    if model_scope 
+      model_proxy.with_model \
+        instance_exec(model_proxy.model, &model_scope)
+    else model_proxy
+    end
   end
 
 end
