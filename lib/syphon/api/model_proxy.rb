@@ -68,7 +68,7 @@ class Syphon::Api::ModelProxy
   private
 
     def find_by_pkey(id)
-      @model.send("find_by_#{@pkey}", id)
+      id ? @model.send("find_by_#{@pkey}", id) : @model.first
     end
 
   end
