@@ -9,8 +9,11 @@ describe Syphon::Api::CRUDController do
     end
   } }
 
+  let (:model_proxy_class) { double }
   let (:model_proxy) { double }
+
   let (:controller)  do 
+    model_proxy.stub(:new) { model_proxy }
     ctrl = Class.new(ActionController::Base) 
     ctrl.send(:include, Syphon::Api::CRUDController)
     ctrl.model_proxy = model_proxy

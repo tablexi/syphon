@@ -9,7 +9,7 @@ describe Syphon::Api::ModelProxy do
     end
   } }
 
-  let (:person_proxy) { Syphon::Api::ModelProxy.new_class(resource_set[:people]) }
+  let (:person_proxy) { Syphon::Api::ModelProxy.new_class(resource_set[:people]).new }
   let (:person) { mock_model("Person") }
 
   before :each do
@@ -24,9 +24,11 @@ describe Syphon::Api::ModelProxy do
 
   it 'should return all resources in the collection' do
     person.class.should_receive(:all) { [person] }
-    p = person_proxy.all
-    p.size.should == 1
-    p.first.keys.should == [:id, :first, :last]
+    result = person_proxy.all
+    result.size.should == 1
+    p = result.first
+    p.keys.should == [:id, :first, :last]
+    p.should be_a Hash
   end
 
   it 'should return all resources in the collection filtered by a query' do
@@ -42,24 +44,36 @@ describe Syphon::Api::ModelProxy do
     person.class.should_receive(:find_by_id) { person }
     p = person_proxy.find(1)
     p.keys.should == [:id, :first, :last]
+    p.should be_a Hash
   end
 
-  it 'should create a resource' do
+  it 'should create a resource successfuly' do
     person.class.should_receive(:create) { person }
     person.class.should_receive(:find_by_id) { person }
     p = person_proxy.create(person.attributes)
+    p.should be_a Hash
+  end
+
+  it 'should create a resource unsuccessfuly' do
+    person.stub(:valid?) { false }
+    person.class.should_receive(:create) { person }
+    person.class.should_not_receive(:find_by_id)
+    p = person_proxy.create(person.attributes)
+    p.should be_a Person
   end
 
   it 'should update a resource' do
-    person.should_receive(:update_attributes) { true }
     person.class.should_receive(:find_by_id) { person }
+    person.should_receive(:update_attributes) { true }
     p = person_proxy.update(person.attributes)
+    p.should be_a Person
   end
 
   it 'should destroy a resource' do
-    person.should_receive(:destroy) { true }
     person.class.should_receive(:find_by_id) { person }
+    person.should_receive(:destroy) { true }
     p = person_proxy.destroy(1)
+    p.should be_a Person
   end
 
 end

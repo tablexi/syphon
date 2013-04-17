@@ -51,15 +51,13 @@ private
   end
 
   def decorate(obj)
-    model_proxy.wrap(obj)
+    scoped_proxy.wrap(obj)
   end
 
   def scoped_proxy
-    if model_scope 
-      model_proxy.with_model \
-        instance_exec(model_proxy.model, &model_scope)
-    else model_proxy
-    end
+    @proxy ||= model_scope ?
+      model_proxy.new(instance_exec(model_proxy.model, &model_scope)) :
+      model_proxy.new
   end
 
 end

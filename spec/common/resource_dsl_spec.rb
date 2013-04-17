@@ -46,6 +46,7 @@ describe Syphon::ResourceDSL do
 
     it 'should parse all inner resource properties' do
       values = {
+        scope:       Proc.new { |m| m.where(id: current_user.id) },
         primary_key: :token,
         model:       :MyUser,
         controller:  :my_users,
@@ -60,6 +61,7 @@ describe Syphon::ResourceDSL do
 
       set = dsl.parse nil do
         resource :user do 
+          scope       &values[:scope]
           primary_key values[:primary_key]
           model       values[:model]
           controller  values[:controller]
@@ -94,13 +96,17 @@ describe Syphon::ResourceDSL do
       set = dsl.parse nil do
         namespace :v1 do
           super_controller :api_v1
-          resource :user do end
-          resource :account do end
+          namespace :admin do
+            resource :subscriptions do end
+          end
+          resource :users do end
+          resource :accounts do end
         end
       end
 
-      set[:user].super_controller.should == :api_v1
-      set[:account].super_controller.should == :api_v1
+      set[:users].super_controller.should == '/v1/api_v1'
+      set[:accounts].super_controller.should == '/v1/api_v1'
+      set[:subscriptions].super_controller.should == '/v1/api_v1'
     end
 
     it 'should raise for illegal context nesting' do
