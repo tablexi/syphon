@@ -19,19 +19,16 @@ class Syphon::Api
         &definition)
     end
 
-    def draw_routes!(application)
+    def draw_routes!
       @resource_set.each do |name, resource|
-        RailsConfig.add_resource(application, resource)
+        RailsConfig.add_resource_route(resource)
       end
     end
 
     # Pretend we're a Rack app so rails can route to us.
     #
-    def draw_discovery_route!(application, path)
-      resource_set = @resource_set
-      application.routes.draw do
-        match path => proc { |env| [200, {"Content-TYpe" => 'application/json'}, [resource_set.to_json]] }
-      end
+    def draw_discovery_route!(path)
+      RailsConfig.add_discovery_route(path, @resource_set)
     end
 
   end

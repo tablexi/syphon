@@ -5,18 +5,23 @@ class Syphon::Api::RailsConfig
 
   class << self
 
-    def add_resource(application, resource)
-      @app = application
+    def add_resource_route(resource)
       @resource = resource
 
       build_controller_chain
 
       unless @resource.hidden
         if @resource.routes.empty? 
-          draw_resourceful_routes(@app)
+          draw_resourceful_routes
         else
-          draw_custom_routes(@app)
+          draw_custom_routes
         end
+      end
+    end
+
+    def add_discovery_route(path, resource_set)
+      Rails.application.routes.draw do
+        match path => proc { |env| [200, {"Content-TYpe" => 'application/json'}, [resource_set.to_json]] }
       end
     end
 
@@ -41,10 +46,10 @@ class Syphon::Api::RailsConfig
       end
     end
 
-    def draw_resourceful_routes(app)
+    def draw_resourceful_routes
       resource = @resource
 
-      @app.routes.draw do
+      Rails.application.routes.draw do
         nested_namespace(resource.namespace.split('/')) do
           resources resource.name, :controller => resource.controller, 
                                    :only => resource.only
@@ -52,12 +57,12 @@ class Syphon::Api::RailsConfig
       end
     end
 
-    def draw_custom_routes(app)
+    def draw_custom_routes
       resource = @resource
       routes = @resource.routes
       controller = @resource.controller
 
-      @app.routes.draw do
+      Rails.application.routes.draw do
         nested_namespace(resource.namespace.split('/')) do
           routes.each do |action, route|
             route, opts = route if route.is_a?(Array)

@@ -1,6 +1,6 @@
 # Syphon
 
-TODO: Write a gem description
+Syphon helps you build discoverable JSON apis on top of Rails applications and intuitive clients to consume them.
 
 ## Installation
 
@@ -18,9 +18,85 @@ Or install it yourself as:
 
 ## Usage
 
-TODO: Write usage instructions here
+### Service
 
-## Contributing
+To define a syphon service, simply add a ruby class to a location of your choice
+(make sure the class can be autoloaded), define your api, and generate the
+routes.
+
+For example. Let's say we want to place our api definition in */app/api/v1.rb*
+
+```bash
+├── twitter_clone
+│   ├── api
+│   │   ├── v1.rb
+│   ├── models
+│   ├── controllers 
+```
+
+*v1.rb* would look like this. See the [DSL](#dsl) section for specifics.
+
+```ruby
+class Api::V1 < Syphon::Api
+  ...
+end
+```
+
+Now that the api is defined, you must explicitly generate the routes in your
+*routes.rb* file.
+
+```ruby
+# Draws routes for all the api defined resources
+#
+Api::V1.draw_routes!
+
+# Draws a route for automatic api discovery (used by Syphon::Client)
+#
+Api::V1.draw_discovery_route!('/api/v1')
+```
+
+#### <a id='dsl'></a> The DSL
+
+An api definition for our Twitter Clone App might look something like this.
+
+```ruby
+class Api::V1
+  api do
+    resource :accounts, :only => [:show, :update] do
+      scope       { |a| a.where(user_id: current_user.id) }
+
+      routes      :show   => ['/account', :via => :get],
+                  :update => ['/account', :via => :put] 
+
+      fields      :id, :username, :email, :name, :location, :website, :bio
+      renames     :full_name => :name
+
+      collections :tweets, :followers, :following
+    end
+
+    resource :followers :do
+      scope       { |a| a.where(user_id: current_user.id) }
+
+      fields      :id, :username
+                  :time_zone, :admin, :manager, :single_access_token
+      resources   :account
+    end
+
+  end
+end
+```
+
+### Client
+
+## FAQ
+
+* Can syphon be used without Rails?
+
+  * No. It makes use of ActionController for building routes among other things.
+    I might look into making it only Rack dependent in the future.
+
+
+### Contributing
 
 1. Fork it
 2. Create your feature branch (`git checkout -b my-new-feature`)

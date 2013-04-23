@@ -25,7 +25,7 @@ describe Syphon::Api::RailsConfig do
 
   before :all do
     resource_set.each do |name, resource|
-      rconfig.add_resource(Application, resource)
+      rconfig.add_resource_route(resource)
     end
   end
 
