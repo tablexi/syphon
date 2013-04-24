@@ -4,3 +4,4 @@ TODO
 - add tests for named routes
 - fix client side and add tests
 - docs
+- handle nil return values
