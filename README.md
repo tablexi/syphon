@@ -62,7 +62,7 @@ An api definition for our Twitter Clone App might look something like this.
 ```ruby
 class Api::V1
   api do
-    resource :accounts, :only => [:show, :update] do
+    resource :users do
       scope       { |a| a.where(user_id: current_user.id) }
 
       routes      :show   => ['/account', :via => :get],
@@ -71,16 +71,27 @@ class Api::V1
       fields      :id, :username, :email, :name, :location, :website, :bio
       renames     :full_name => :name
 
-      collections :tweets, :followers, :following
+      collections :tweets, :favorites, :followers, :followings
     end
 
-    resource :followers :do
-      scope       { |a| a.where(user_id: current_user.id) }
-
-      fields      :id, :username
-                  :time_zone, :admin, :manager, :single_access_token
-      resources   :account
+    resource :followers, :extends => :users do
+      routes      :index, :show, :destroy
+      resources   :user
     end
+
+    resource :followings, :extends => :followers
+
+    resource :tweets, :except => :update do
+      
+      fields      :id, :body, :retweets, :created_at
+      renames     :created_at => :tweeted_at
+
+      resources   :user
+      collections :retweets, :replies
+    end
+
+    resource :retweets, :extends => :tweets
+    resource :replies,  :extends => :tweets
 
   end
 end

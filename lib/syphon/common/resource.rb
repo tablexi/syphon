@@ -20,8 +20,8 @@ class Syphon::Resource
     @namespace = @namespace[1..-1] if @namespace[0] == ?/
     @uri = @namespace.empty? ? "/#{@name}" : "/#{@namespace}/#{@name}"
 
-    only = context.only || opts[:only] || ACTIONS
-    except = context.except || opts[:except] || []
+    only = Array(context.only || opts[:only] || ACTIONS)
+    except = Array(context.except || opts[:except] || [])
     @only = (ACTIONS && only) - except
     @except = ACTIONS - @only
   end
