@@ -66,7 +66,6 @@ class Syphon::Api::RailsConfig
         nested_namespace(resource.namespace.split('/')) do
           routes.each do |action, route|
             route, opts = route if route.is_a?(Array)
-            puts "#{controller}#{action}"
             match( { route => "#{controller}##{action}" }.merge(opts || {}) )
           end
         end
