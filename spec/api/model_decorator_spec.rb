@@ -76,7 +76,6 @@ describe Syphon::Api::ModelDecorator do
   end
 
   it 'should respond to the included module method' do
-    binding.pry
     post.should have_key(:test_method)
   end
 
