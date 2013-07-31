@@ -1,22 +1,28 @@
 require_relative '../spec_helper'
+module TestInstanceInclude
+  def test_method
+    "result"
+  end
+end
 
 describe Syphon::Api::ModelDecorator do
   let(:dsl) { Syphon::ResourceDSL }
 
-  let(:resource_set) { dsl.parse(nil) { 
+  let(:resource_set) { dsl.parse(nil) {
     resource :people do
       fields :id, :first, :last
       renames :first => :first_name, :last => :last_name
     end
 
-    resource :users do 
+    resource :users do
       fields :email
       joins  :person, :posts
-    end 
+    end
 
-    resource :posts do 
-      fields :title, :body
-    end 
+    resource :posts do
+      fields :title, :body, :test_method
+      instance_include_modules TestInstanceInclude
+    end
 
     resource :comments do
       fields :body
@@ -37,8 +43,8 @@ describe Syphon::Api::ModelDecorator do
   end
 
   it 'should only return the whitelisted fields' do
-    post.size.should == 2
-    post.keys.should == [:title, :body]
+    post.size.should == 3
+    post.keys.should == [:title, :body, :test_method]
   end
 
 
@@ -60,13 +66,18 @@ describe Syphon::Api::ModelDecorator do
   it 'should wrap nested resources' do
     user[:person].size.should == 3
     user[:posts].should be_a Array
-    user[:posts].first.size.should == 2
+    user[:posts].first.size.should == 3
   end
 
   it 'should link resources and collections' do
     comment.size.should == 3
     comment[:user].should == '/users/20'
     comment[:people].should == '/people?where%5Bcomment_id%5D=100'
+  end
+
+  it 'should respond to the included module method' do
+    binding.pry
+    post.should have_key(:test_method)
   end
 
 end

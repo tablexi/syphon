@@ -11,7 +11,7 @@ class Syphon::Api::RailsConfig
       build_controller_chain
 
       unless @resource.hidden
-        if @resource.routes.empty? 
+        if @resource.routes.empty?
           draw_resourceful_routes
         else
           draw_custom_routes
@@ -28,7 +28,7 @@ class Syphon::Api::RailsConfig
   private
 
     def build_controller_chain
-      controller = @resource.controller_class || 
+      controller = @resource.controller_class ||
         Class.new(@resource.super_controller_class || ActionController::Base)
 
       # inherit from CRUDController to add decorator helper functions
@@ -41,7 +41,7 @@ class Syphon::Api::RailsConfig
       #
       unless controller.name
         @resource.namespace_module.const_set(
-          controllerize(@resource.controller), 
+          controllerize(@resource.controller),
           controller)
       end
     end
@@ -51,7 +51,7 @@ class Syphon::Api::RailsConfig
 
       Rails.application.routes.draw do
         nested_namespace(resource.namespace.split('/')) do
-          resources resource.name, :controller => resource.controller, 
+          resources resource.name, :controller => resource.controller,
                                    :only => resource.only
         end
       end
@@ -66,6 +66,7 @@ class Syphon::Api::RailsConfig
         nested_namespace(resource.namespace.split('/')) do
           routes.each do |action, route|
             route, opts = route if route.is_a?(Array)
+            puts "#{controller}#{action}"
             match( { route => "#{controller}##{action}" }.merge(opts || {}) )
           end
         end

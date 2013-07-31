@@ -3,7 +3,7 @@ require 'active_support/core_ext/class/attribute'
 class Syphon::Api::ModelDecorator
   extend Forwardable
 
-  class_attribute :resource, :associations, :fields, :aliases, :instance_writer => false  
+  class_attribute :resource, :associations, :fields, :aliases, :dci_modules, :instance_writer => false
   def_delegators :resource, :fields, :renames, :resource_name, :joins, :resources, :collections
 
   class << self
@@ -14,12 +14,14 @@ class Syphon::Api::ModelDecorator
 
     def init(resource)
       resource.decorator_class = self
+      self.dci_modules = [*resource.instance_include_modules]
       self.resource = resource
       self.associations = fetch_assoc_details
       self
     end
 
     def wrap(instance)
+      self.dci_modules.each { |mod| instance.send(:extend, mod) }
       self.new(instance).to_h
     end
 
@@ -29,9 +31,9 @@ class Syphon::Api::ModelDecorator
       model = resource.model_class
       return {} unless model && model.ancestors.include?(ActiveRecord::Base)
 
-      model.reflect_on_all_associations.reduce({}) do |assocs, a| 
+      model.reflect_on_all_associations.reduce({}) do |assocs, a|
         assocs[a.name] = { type: a.macro,
-                           foreign_key: (a.options[:foreign_key] || 
+                           foreign_key: (a.options[:foreign_key] ||
                               (a.macro == :belongs_to ? "#{a.name}_id" : "#{resource.resource_name}_id")).to_s }
         assocs
       end
@@ -60,7 +62,7 @@ private
 
   def collect_whitelisted_fields
     fields.reduce({}) do |attrs, field|
-      attrs[field] = @instance.send(field) if 
+      attrs[field] = @instance.send(field) if
         @instance.respond_to?(field)
       attrs
     end
@@ -69,8 +71,8 @@ private
   def merge_nested_resources(attrs)
     add_resource_fields(joins, attrs) do |resource, assoc|
       if (decorator = resource.decorator_class)
-        assoc.is_a?(Array) ? 
-          assoc.map { |a| decorator.wrap(a) } : 
+        assoc.is_a?(Array) ?
+          assoc.map { |a| decorator.wrap(a) } :
           decorator.wrap(assoc)
       else assoc
       end
@@ -103,7 +105,7 @@ private
   #
   def stringify_large_vals(attrs)
     attrs.each do |k,v|
-      attrs[k] = v.to_s if 
+      attrs[k] = v.to_s if
         v.is_a?(Numeric) && v > 10000000000
     end
   end
@@ -114,7 +116,7 @@ private
     associations.reduce(attrs) do |attrs, name|
       if !@instance.respond_to?(name)
         attrs
-      elsif (assoc = @instance.send(name)) && 
+      elsif (assoc = @instance.send(name)) &&
             (assoc_resource = resource.resource_set.find(name))
         attrs[name] = yield(assoc_resource, assoc)
         attrs
